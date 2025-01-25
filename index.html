@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Strateji Oyunu</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2d3436;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        #gameContainer {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        #map {
+            height: 80vh;
+            border: 3px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+
+        #infoPanel {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .player-area {
+            position: absolute;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        #drawCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            pointer-events: auto;
+        }
+
+        .dice-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            perspective: 1000px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .dice {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .dice-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border: 3px solid #6c5ce7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.15);
+            backface-visibility: hidden;
+        }
+
+        .dice-face:nth-child(1) { transform: translateZ(60px); }
+        .dice-face:nth-child(2) { transform: rotateX(180deg) translateZ(60px); }
+        .dice-face:nth-child(3) { transform: rotateY(90deg) translateZ(60px); }
+        .dice-face:nth-child(4) { transform: rotateY(-90deg) translateZ(60px); }
+        .dice-face:nth-child(5) { transform: rotateX(90deg) translateZ(60px); }
+        .dice-face:nth-child(6) { transform: rotateX(-90deg) translateZ(60px); }
+
+        .result-display {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.95);
+            padding: 20px 40px;
+            border-radius: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            font-size: 24px;
+            display: none;
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+            animation: slideIn 0.5s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .player-info {
+            margin-bottom: 20px;
+            padding: 18px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .player-info:hover {
+            transform: translateY(-3px);
+        }
+
+        .active-player {
+            animation: glow 1.5s infinite alternate;
+        }
+
+        #turnIndicator {
+            background: linear-gradient(135deg, rgba(108,92,231,0.9), rgba(84,109,229,0.9));
+            color: white;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 12px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            animation: pulseBorder 2s infinite;
+        }
+
+        button {
+            background: linear-gradient(135deg, #6c5ce7 0%, #8a7cf0 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(108,92,231,0.35);
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255,255,255,0.2),
+                transparent
+            );
+            transition: all 0.6s ease;
+        }
+
+        button:hover::after {
+            left: 100%;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(108,92,231,0.3); }
+            to { box-shadow: 0 0 20px rgba(108,92,231,0.6); }
+        }
+
+        @keyframes pulseBorder {
+            0% { border-color: rgba(255,255,255,0.3); }
+            50% { border-color: rgba(255,255,255,0.6); }
+            100% { border-color: rgba(255,255,255,0.3); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            #gameContainer {
+                grid-template-columns: 1fr;
+            }
+            
+            #map {
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="map">
+            <canvas id="drawCanvas"></canvas>
+        </div>
+        
+        <div id="infoPanel">
+            <div class="player-info" id="player1Info">
+                <h2>🐰 Tavşan Krallık</h2>
+                <p>Yüzölçümü: <span id="p1Size">0 km²</span></p>
+            </div>
+            <div class="player-info" id="player2Info">
+                <h2>🐻 Ayı Krallık</h2>
+                <p>Yüzölçümü: <span id="p2Size">0 km²</span></p>
+            </div>
+            <button onclick="endSelection()">Zar At ve Saldır!</button>
+            <div id="turnIndicator">Şimdi Sıra: <span id="currentPlayerName">Tavşan Krallık</span></div>
+        </div>
+    </div>
+
+    <div class="dice-container">
+        <div class="dice">
+            <div class="dice-face">1</div>
+            <div class="dice-face">2</div>
+            <div class="dice-face">3</div>
+            <div class="dice-face">4</div>
+            <div class="dice-face">5</div>
+            <div class="dice-face">6</div>
+        </div>
+    </div>
+
+    <div class="result-display" id="resultText"></div>
+
+<script>
+class UltimateStratejiOyunu {
+    constructor() {
+        this.players = {
+            player1: { id: 1, color: '#ff7675', areas: [], name: 'Tavşan Krallık' },
+            player2: { id: 2, color: '#74b9ff', areas: [], name: 'Ayı Krallık' }
+        };
+        this.currentPlayer = 'player1';
+        this.points = [];
+        this.isDrawing = false;
+        this.km2Ratio = 0.01;
+        this.initGame();
+    }
+
+    initGame() {
+        this.initMap();
+        this.initCanvas();
+        this.updateInfoPanel();
+    }
+
+    initMap() {
+        const map = document.getElementById('map');
+        const size = 100;
+        
+        this.createArea('player1', 10, map.offsetHeight - size - 10, size, size);
+        this.createArea('player2', map.offsetWidth - size - 10, 10, size, size);
+    }
+
+    createArea(player, x, y, w, h) {
+        const area = document.createElement('div');
+        area.className = 'player-area';
+        area.style.cssText = `
+            left: ${x}px;
+            top: ${y}px;
+            width: ${w}px;
+            height: ${h}px;
+            background: ${this.players[player].color};
+        `;
+        area.dataset.owner = player;
+        document.getElementById('map').appendChild(area);
+        this.players[player].areas.push({x, y, w, h, element: area});
+        this.updateInfoPanel();
+    }
+
+    initCanvas() {
+        this.canvas = document.getElementById('drawCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.resizeCanvas();
+        
+        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+        this.canvas.addEventListener('mouseleave', () => this.stopDrawing());
+    }
+
+    resizeCanvas() {
+        const map = document.getElementById('map');
+        this.canvas.width = map.offsetWidth;
+        this.canvas.height = map.offsetHeight;
+    }
+
+    isPointInPlayerArea(point) {
+        return this.players[this.currentPlayer].areas.some(area => {
+            const rect = area.element.getBoundingClientRect();
+            return (
+                point.x >= rect.left &&
+                point.x <= rect.right &&
+                point.y >= rect.top &&
+                point.y <= rect.bottom
+            );
+        });
+    }
+
+    startDrawing(e) {
+        const pos = {x: e.clientX, y: e.clientY};
+        if(!this.isPointInPlayerArea(pos)) {
+            alert("Saldırıya kendi bölgenizden başlamalısınız!");
+            return;
+        }
+        
+        const mapRect = document.getElementById('map').getBoundingClientRect();
+        const canvasPos = {
+            x: pos.x - mapRect.left,
+            y: pos.y - mapRect.top
+        };
+
+        this.isDrawing = true;
+        this.points = [canvasPos];
+        this.ctx.strokeStyle = this.players[this.currentPlayer].color;
+        this.ctx.fillStyle = this.players[this.currentPlayer].color + '60';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(canvasPos.x, canvasPos.y);
+    }
+
+    draw(e) {
+        if(!this.isDrawing) return;
+        const mapRect = document.getElementById('map').getBoundingClientRect();
+        const pos = {
+            x: e.clientX - mapRect.left,
+            y: e.clientY - mapRect.top
+        };
+        this.points.push(pos);
+        this.ctx.lineTo(pos.x, pos.y);
+        this.ctx.stroke();
+    }
+
+    stopDrawing() {
+        if(!this.isDrawing) return;
+        this.isDrawing = false;
+        this.closePath();
+    }
+
+    closePath() {
+        if(this.points.length < 3) return;
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
+    async attack() {
+        const selectedArea = this.calculateArea();
+        if(selectedArea < 100) {
+            alert('En az 100px² büyüklüğünde alan seçin!');
+            return;
+        }
+
+        const playerArea = this.calculateTotalArea(this.currentPlayer);
+        const effectiveArea = Math.min(selectedArea, playerArea);
+        
+        const result = await this.rollDiceAnimation();
+        this.processResult(result, effectiveArea);
+        this.clearCanvas();
+        
+        if(this.checkGameOver()) return;
+        
+        this.switchTurn();
+        this.updateInfoPanel();
+    }
+
+    calculateArea() {
+        if(this.points.length < 3) return 0;
+        let area = 0;
+        for(let i = 0; i < this.points.length; i++) {
+            const j = (i + 1) % this.points.length;
+            area += this.points[i].x * this.points[j].y;
+            area -= this.points[j].x * this.points[i].y;
+        }
+        return Math.abs(area / 2);
+    }
+
+    async rollDiceAnimation() {
+        const diceContainer = document.querySelector('.dice-container');
+        const resultDisplay = document.getElementById('resultText');
+        const dice = document.querySelector('.dice');
+        const results = {
+            1: { text: 'Tam Kazanç!', desc: 'Çizdiğin alanı kaptın!' },
+            2: { text: 'Tam Kayıp!', desc: 'Çizdiğin alanı kaybettin!' },
+            3: { text: 'Katlı Kazanç!', desc: 'Çizdiğin alanın 2 katını kaptın!' },
+            4: { text: 'Katlı Kayıp!', desc: 'Çizdiğin alanın 2 katını kaybettin!' },
+            5: { text: 'Yarım Kazanç!', desc: 'Çizdiğin alanın yarısını kaptın!' },
+            6: { text: 'Kısmi Kayıp!', desc: 'Çizdiğin alanın yarısını kaybettin!' }
+        };
+
+        diceContainer.style.display = 'block';
+        const result = Math.floor(Math.random() * 6) + 1;
+        
+        dice.style.transition = 'transform 1.2s cubic-bezier(0.4,0,0.2,1)';
+        dice.style.transform = 
+            `rotateX(${Math.random()*3600}deg) rotateY(${Math.random()*3600}deg)`;
+        
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        
+        dice.style.transition = 'none';
+        switch(result) {
+            case 1: dice.style.transform = 'rotateX(0deg) rotateY(0deg)'; break;
+            case 2: dice.style.transform = 'rotateX(180deg) rotateY(0deg)'; break;
+            case 3: dice.style.transform = 'rotateX(0deg) rotateY(90deg)'; break;
+            case 4: dice.style.transform = 'rotateX(0deg) rotateY(-90deg)'; break;
+            case 5: dice.style.transform = 'rotateX(90deg) rotateY(0deg)'; break;
+            case 6: dice.style.transform = 'rotateX(-90deg) rotateY(0deg)'; break;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 800));
+        diceContainer.style.display = 'none';
+        resultDisplay.innerHTML = `
+            <div>${results[result].text}</div>
+            <div style="font-size:16px;color:#666;">${results[result].desc}</div>
+        `;
+        resultDisplay.style.display = 'block';
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        resultDisplay.style.display = 'none';
+        
+        return result;
+    }
+
+    processResult(result, area) {
+        const bbox = this.calculateBoundingBox();
+        const aspectRatio = bbox.w / bbox.h || 1;
+        
+        let targetArea = area;
+        switch(result) {
+            case 1: break;
+            case 2: targetArea = -area; break;
+            case 3: targetArea *= 2; break;
+            case 4: targetArea *= -2; break;
+            case 5: targetArea *= 0.5; break;
+            case 6: targetArea *= -0.5; break;
+        }
+
+        if(targetArea > 0) {
+            const newSize = this.calculateNewSize(targetArea, aspectRatio);
+            this.createArea(
+                this.currentPlayer,
+                bbox.x + (bbox.w - newSize.w)/2,
+                bbox.y + (bbox.h - newSize.h)/2,
+                newSize.w,
+                newSize.h
+            );
+        } else {
+            this.shrinkArea(this.players[this.currentPlayer], Math.abs(targetArea));
+        }
+    }
+
+    calculateBoundingBox() {
+        const minX = Math.min(...this.points.map(p => p.x));
+        const maxX = Math.max(...this.points.map(p => p.x));
+        const minY = Math.min(...this.points.map(p => p.y));
+        const maxY = Math.max(...this.points.map(p => p.y));
+        return {
+            x: minX,
+            y: minY,
+            w: maxX - minX,
+            h: maxY - minY
+        };
+    }
+
+    calculateNewSize(area, aspectRatio) {
+        const height = Math.sqrt(area / aspectRatio);
+        const width = area / height;
+        return { w: width, h: height };
+    }
+
+    shrinkArea(player, amount) {
+        const areaToRemove = Math.sqrt(amount);
+        player.areas = player.areas.filter(area => {
+            if(area.w > areaToRemove && area.h > areaToRemove) {
+                area.w -= areaToRemove;
+                area.h -= areaToRemove;
+                area.element.style.width = area.w + 'px';
+                area.element.style.height = area.h + 'px';
+                return true;
+            }
+            area.element.remove();
+            return false;
+        });
+    }
+
+    checkGameOver() {
+        const p1Area = this.players.player1.areas.length;
+        const p2Area = this.players.player2.areas.length;
+        
+        if(p1Area === 0 || p2Area === 0) {
+            const winner = p1Area > 0 ? 'Tavşan Krallık' : 'Ayı Krallık';
+            alert(`Oyun Bitti! Kazanan: ${winner}`);
+            location.reload();
+            return true;
+        }
+        return false;
+    }
+
+    calculateTotalArea(player) {
+        return this.players[player].areas.reduce((sum, area) => sum + (area.w * area.h), 0);
+    }
+
+    updateInfoPanel() {
+        document.getElementById('p1Size').textContent = (this.calculateTotalArea('player1') * this.km2Ratio).toFixed(2) + ' km²';
+        document.getElementById('p2Size').textContent = (this.calculateTotalArea('player2') * this.km2Ratio).toFixed(2) + ' km²';
+        document.querySelectorAll('.player-info').forEach(el => el.classList.remove('active-player'));
+        document.getElementById(`${this.currentPlayer}Info`).classList.add('active-player');
+        document.getElementById('currentPlayerName').textContent = 
+            this.players[this.currentPlayer].name;
+    }
+
+    switchTurn() {
+        this.currentPlayer = this.currentPlayer === 'player1' ? 'player2' : 'player1';
+    }
+
+    clearCanvas() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.points = [];
+    }
+}
+
+const game = new UltimateStratejiOyunu();
+
+function endSelection() {
+    game.attack();
+}
+</script>
+</body>
+</html>
