@@ -1,10 +1,43 @@
-<!DOCTYPE html>
+f<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ultimate Strateji Oyunu</title>
     <style>
+
+/* Oyun başlangıç popup'ı */
+#startPopup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.95);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.3);
+    max-width: 500px;
+    z-index: 9999;
+    display: none;
+}
+#startPopup h2 { color: #6c5ce7; margin-top: 0; }
+#startPopup ul { padding-left: 20px; }
+#startPopup li { margin: 10px 0; }
+
+/* Oyuncu renk etiketleri */
+.player-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.player1-label { background: #ff767540; }
+.player2-label { background: #74b9ff40; }
+
+
+
         * {
             box-sizing: border-box;
             touch-action: manipulation;
@@ -224,20 +257,46 @@
     </style>
 </head>
 <body>
+
+<div id="startPopup">
+    <h2>🎮 Ultimate Strateji Oyunu</h2>
+    <p>Rakip krallığın tüm topraklarını ele geçir!</p>
+    
+    <div class="player-label player1-label">🐰 Tavşan Krallık (Kırmızı)</div>
+    <div class="player-label player2-label">🐻 Ayı Krallık (Mavi)</div>
+
+    <h3>✨ Nasıl Oynanır?</h3>
+    <ul>
+        <li>🎨 Kendi bölgenden başlayarak alan çiz</li>
+        <li>🎲 Zar at ve sonucu bekle</li>
+        <li>⚔️ Kazanırsan çizdiğin alanı kap!</li>
+    </ul>
+    
+    <button onclick="startGame()" style="margin-top:15px;">Anladım, Başla!</button>
+</div>
+
+
     <div id="gameContainer">
         <div id="map">
             <canvas id="drawCanvas"></canvas>
         </div>
         
         <div id="infoPanel">
-            <div class="player-info" id="player1Info">
-                <h2>🐰 Tavşan Krallık</h2>
-                <p>Yüzölçümü: <span id="p1Size">0 km²</span></p>
-            </div>
-            <div class="player-info" id="player2Info">
-                <h2>🐻 Ayı Krallık</h2>
-                <p>Yüzölçümü: <span id="p2Size">0 km²</span></p>
-            </div>
+           
+<div class="player-info" id="player1Info">
+    <div class="player-grid">
+        <div class="color-box" style="background:#ff7675"></div>
+        <div class="player-name">🐰 Tavşan Krallık</div>
+        <div class="player-size">Yüzölçümü: <span id="p1Size">0 km²</span></div>
+    </div>
+</div>
+<div class="player-info" id="player2Info">
+    <div class="player-grid">
+        <div class="color-box" style="background:#74b9ff"></div>
+        <div class="player-name">🐻 Ayı Krallık</div>
+        <div class="player-size">Yüzölçümü: <span id="p2Size">0 km²</span></div>
+    </div>
+</div>
             <button onclick="endSelection()">Zar At ve Saldır!</button>
             <div id="turnIndicator">Şimdi Sıra: <span id="currentPlayerName">Tavşan Krallık</span></div>
         </div>
@@ -257,6 +316,17 @@
     <div class="result-display" id="resultText"></div>
 
 <script>
+
+// Oyun başlangıç kontrolü
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('startPopup').style.display = 'block';
+});
+
+function startGame() {
+    document.getElementById('startPopup').style.display = 'none';
+}
+
+
 class UltimateStratejiOyunu {
     constructor() {
         this.players = {
