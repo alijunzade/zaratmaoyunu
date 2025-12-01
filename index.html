@@ -1,630 +1,622 @@
-f<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Strateji Oyunu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Boyama Savaşları: Global Risk</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
-/* Oyun başlangıç popup'ı */
-#startPopup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255,255,255,0.95);
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: 0 0 40px rgba(0,0,0,0.3);
-    max-width: 500px;
-    z-index: 9999;
-    display: none;
-}
-#startPopup h2 { color: #6c5ce7; margin-top: 0; }
-#startPopup ul { padding-left: 20px; }
-#startPopup li { margin: 10px 0; }
-
-/* Oyuncu renk etiketleri */
-.player-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-.player1-label { background: #ff767540; }
-.player2-label { background: #74b9ff40; }
-
-
-
-        * {
-            box-sizing: border-box;
-            touch-action: manipulation;
+        :root {
+            --bg-gradient: linear-gradient(135deg, #81ecec 0%, #74b9ff 100%);
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --p1-color: #ff7675;
+            --p2-color: #74b9ff;
         }
 
         body {
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #2d3436;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            min-height: 100vh;
+            margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif;
+            background: var(--bg-gradient); display: flex; justify-content: center;
+            align-items: center; height: 100vh; user-select: none; touch-action: none;
         }
 
-        #gameContainer {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 20px;
+        /* --- OYUN ALANI --- */
+        #gameLayout {
+            display: flex; gap: 20px; align-items: center; width: 95vw; max-width: 1200px; height: 90vh;
         }
 
-        #map {
-            height: 80vh;
-            border: 3px solid rgba(255,255,255,0.3);
-            background: rgba(255,255,255,0.9);
-            border-radius: 20px;
-            position: relative;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            overflow: hidden;
-            backdrop-filter: blur(5px);
+        #canvasWrapper {
+            flex-grow: 1; height: 100%; background: #e3f2fd;
+            border-radius: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            position: relative; overflow: hidden; border: 8px solid #fff;
         }
 
-        #infoPanel {
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 22px; }
+        #uiCanvas { cursor: crosshair; }
+
+        /* --- SAĞ PANEL --- */
+        #sidePanel {
+            width: 320px; display: flex; flex-direction: column; gap: 12px;
         }
 
-        .player-area {
-            position: absolute;
-            border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: white;
-            text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
-            pointer-events: none;
+        .info-card {
+            background: var(--panel-bg); padding: 12px 15px; border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s;
+            border-left: 8px solid #ddd;
+        }
+        .player-card.active { transform: scale(1.03); border-color: gold !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        
+        .card-content { display: flex; align-items: center; gap: 15px; }
+        .flag { font-size: 28px; }
+        .stats h3 { margin: 0; font-size: 15px; color: #2d3436; }
+        .stats p { margin: 0; font-size: 13px; color: #636e72; font-weight: bold; }
+
+        /* Limit Göstergesi */
+        .limit-bar-bg { width: 100%; height: 6px; background: #eee; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+        .limit-bar-fill { height: 100%; width: 0%; background: #00b894; transition: width 0.1s, background 0.3s; }
+
+        #turnBadge {
+            background: #6c5ce7; color: white; text-align: center; padding: 12px;
+            border-radius: 15px; font-size: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
-        #drawCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: crosshair;
-            pointer-events: auto;
+        /* Butonlar */
+        .btn-group { display: flex; gap: 10px; }
+        .icon-btn {
+            background: white; border: none; padding: 10px; border-radius: 12px;
+            cursor: pointer; font-size: 18px; flex: 1; box-shadow: 0 4px 0 #b2bec3;
+            transition: transform 0.1s;
         }
+        .icon-btn:active { transform: translateY(4px); box-shadow: none; }
 
-        .dice-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            perspective: 1000px;
-            z-index: 1000;
-            display: none;
-        }
-
-        .dice {
-            width: 120px;
-            height: 120px;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 1.2s cubic-bezier(0.4,0,0.2,1);
-        }
-
+        #actionArea { margin-top: auto; text-align: center; }
+        
+        /* ZAR */
+        .dice-box { width: 70px; height: 70px; margin: 0 auto 10px; position: relative; transform-style: preserve-3d; transition: transform 1s ease-out; }
         .dice-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: #fff;
-            border: 3px solid #6c5ce7;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.15);
-            backface-visibility: hidden;
+            position: absolute; width: 100%; height: 100%; background: white;
+            border: 2px solid #ddd; border-radius: 12px; display: flex;
+            justify-content: center; align-items: center; font-size: 24px; font-weight: bold;
         }
+        .df1 { transform: translateZ(35px); }
+        .df2 { transform: rotateY(180deg) translateZ(35px); }
+        .df3 { transform: rotateY(90deg) translateZ(35px); }
+        .df4 { transform: rotateY(-90deg) translateZ(35px); }
+        .df5 { transform: rotateX(90deg) translateZ(35px); }
+        .df6 { transform: rotateX(-90deg) translateZ(35px); }
 
-        .dice-face:nth-child(1) { transform: translateZ(60px); }
-        .dice-face:nth-child(2) { transform: rotateX(180deg) translateZ(60px); }
-        .dice-face:nth-child(3) { transform: rotateY(90deg) translateZ(60px); }
-        .dice-face:nth-child(4) { transform: rotateY(-90deg) translateZ(60px); }
-        .dice-face:nth-child(5) { transform: rotateX(90deg) translateZ(60px); }
-        .dice-face:nth-child(6) { transform: rotateX(-90deg) translateZ(60px); }
-
-        .result-display {
-            position: fixed;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255,255,255,0.95);
-            padding: 20px 40px;
-            border-radius: 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            font-size: 24px;
-            display: none;
-            z-index: 1001;
-            backdrop-filter: blur(5px);
-            animation: slideIn 0.5s cubic-bezier(0.4,0,0.2,1);
+        #rollBtn {
+            width: 100%; padding: 15px; border: none; border-radius: 15px;
+            background: #dfe6e9; color: #636e72; font-size: 16px; font-weight: bold;
+            cursor: not-allowed; transition: all 0.3s; box-shadow: 0 5px 0 #b2bec3;
         }
+        #rollBtn.ready { background: #00b894; color: white; cursor: pointer; box-shadow: 0 5px 0 #008f72; animation: bounce 1s infinite; }
+        #rollBtn:active { transform: translateY(5px); box-shadow: none; }
 
-        .player-info {
-            margin-bottom: 20px;
-            padding: 18px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.95);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease;
+        /* --- POPUPS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
 
-        .player-info:hover {
-            transform: translateY(-3px);
+        .modal-card {
+            background: white; padding: 30px; border-radius: 30px; text-align: center;
+            max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+        .modal-overlay.active .modal-card { transform: scale(1); }
 
-        .active-player {
-            animation: glow 1.5s infinite alternate;
-        }
+        .rules-list { text-align: left; background: #f1f2f6; padding: 20px; border-radius: 15px; margin: 20px 0; }
+        .rules-list li { margin-bottom: 10px; color: #555; font-size: 14px; }
+        .rules-list b { color: #2d3436; }
 
-        #turnIndicator {
-            background: linear-gradient(135deg, rgba(108,92,231,0.9), rgba(84,109,229,0.9));
-            color: white;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 12px;
-            border: 2px dashed rgba(255,255,255,0.3);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            backdrop-filter: blur(5px);
-            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-            animation: pulseBorder 2s infinite;
-        }
+        /* SETUP SCREEN */
+        .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+        .player-select { background: #f8f9fa; padding: 15px; border-radius: 15px; border: 3px solid transparent; }
+        .p1-sel { border-color: var(--p1-color); }
+        .p2-sel { border-color: var(--p2-color); }
+        select { width: 100%; padding: 8px; border-radius: 8px; margin-top: 5px; }
 
-        button {
-            background: linear-gradient(135deg, #6c5ce7 0%, #8a7cf0 100%);
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 14px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            position: relative;
-            overflow: hidden;
-            width: 100%;
+        .primary-btn {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe); color: white; border: none;
+            padding: 12px 40px; font-size: 18px; border-radius: 50px; cursor: pointer;
+            transition: transform 0.2s; box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
         }
+        .primary-btn:hover { transform: scale(1.05); }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(108,92,231,0.35);
-        }
-
-        button::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                120deg,
-                transparent,
-                rgba(255,255,255,0.2),
-                transparent
-            );
-            transition: all 0.6s ease;
-        }
-
-        button:hover::after {
-            left: 100%;
-        }
-
-        @keyframes glow {
-            from { box-shadow: 0 0 10px rgba(108,92,231,0.3); }
-            to { box-shadow: 0 0 20px rgba(108,92,231,0.6); }
-        }
-
-        @keyframes pulseBorder {
-            0% { border-color: rgba(255,255,255,0.3); }
-            50% { border-color: rgba(255,255,255,0.6); }
-            100% { border-color: rgba(255,255,255,0.3); }
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 
         @media (max-width: 768px) {
-            #gameContainer {
-                grid-template-columns: 1fr;
-            }
-            
-            #map {
-                height: 60vh;
-            }
+            #gameLayout { flex-direction: column; height: 95vh; }
+            #sidePanel { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+            .info-card { flex: 1; min-width: 140px; }
+            #actionArea { width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+            .dice-box { width: 50px; height: 50px; margin: 0; }
+            .df1 { transform: translateZ(25px); } .df2 { transform: rotateY(180deg) translateZ(25px); } /* vb... mobilde basit tut */
+            #rollBtn { padding: 10px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
-<div id="startPopup">
-    <h2>🎮 Ultimate Strateji Oyunu</h2>
-    <p>Rakip krallığın tüm topraklarını ele geçir!</p>
-    
-    <div class="player-label player1-label">🐰 Tavşan Krallık (Kırmızı)</div>
-    <div class="player-label player2-label">🐻 Ayı Krallık (Mavi)</div>
+    <div id="setupModal" class="modal-overlay active">
+        <div class="modal-card">
+            <h1 style="color:#6c5ce7; margin:0;">🌍 Boyama Savaşları</h1>
+            <p style="color:#636e72;">Ülkeni seç ve stratejini konuştur!</p>
+            
+            <div class="setup-grid">
+                <div class="player-select p1-sel">
+                    <h4 style="margin:0; color:#ff7675">Oyuncu 1</h4>
+                    <div style="font-size:40px; margin:10px 0;" id="p1FlagPreview">❓</div>
+                    <select id="p1Select" onchange="updatePreview('p1')"></select>
+                </div>
+                <div class="player-select p2-sel">
+                    <h4 style="margin:0; color:#74b9ff">Oyuncu 2</h4>
+                    <div style="font-size:40px; margin:10px 0;" id="p2FlagPreview">❓</div>
+                    <select id="p2Select" onchange="updatePreview('p2')"></select>
+                </div>
+            </div>
 
-    <h3>✨ Nasıl Oynanır?</h3>
-    <ul>
-        <li>🎨 Kendi bölgenden başlayarak alan çiz</li>
-        <li>🎲 Zar at ve sonucu bekle</li>
-        <li>⚔️ Kazanırsan çizdiğin alanı kap!</li>
-    </ul>
-    
-    <button onclick="startGame()" style="margin-top:15px;">Anladım, Başla!</button>
-</div>
+            <div class="rules-list" style="font-size:13px; padding:10px;">
+                🎨 <b>Nasıl Oynanır:</b> Kendi renginden başlayarak rakip alana doğru çizim yap.<br>
+                🎲 <b>Risk:</b> Zar at! Tek gelirse kazanırsın, çift gelirse çizdiğin yer silinir.<br>
+                📏 <b>Limit:</b> Kendi alanın kadar büyük bir yeri riske edebilirsin.
+            </div>
 
-
-    <div id="gameContainer">
-        <div id="map">
-            <canvas id="drawCanvas"></canvas>
-        </div>
-        
-        <div id="infoPanel">
-           
-<div class="player-info" id="player1Info">
-    <div class="player-grid">
-        <div class="color-box" style="background:#ff7675"></div>
-        <div class="player-name">🐰 Tavşan Krallık</div>
-        <div class="player-size">Yüzölçümü: <span id="p1Size">0 km²</span></div>
-    </div>
-</div>
-<div class="player-info" id="player2Info">
-    <div class="player-grid">
-        <div class="color-box" style="background:#74b9ff"></div>
-        <div class="player-name">🐻 Ayı Krallık</div>
-        <div class="player-size">Yüzölçümü: <span id="p2Size">0 km²</span></div>
-    </div>
-</div>
-            <button onclick="endSelection()">Zar At ve Saldır!</button>
-            <div id="turnIndicator">Şimdi Sıra: <span id="currentPlayerName">Tavşan Krallık</span></div>
+            <button class="primary-btn" onclick="finishSetup()">SAVAŞA BAŞLA 🚀</button>
         </div>
     </div>
 
-    <div class="dice-container">
-        <div class="dice">
-            <div class="dice-face">1</div>
-            <div class="dice-face">2</div>
-            <div class="dice-face">3</div>
-            <div class="dice-face">4</div>
-            <div class="dice-face">5</div>
-            <div class="dice-face">6</div>
+    <div id="infoModal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>📜 Oyun Kuralları</h2>
+            <div class="rules-list">
+                <ol style="padding-left:20px;">
+                    <li><b>Sıra Sende:</b> Kendi rengine tıklayıp basılı tutarak, fethetmek istediğin alanı çiz.</li>
+                    <li><b>Limitler:</b> Sahip olduğun toplam alanın %120'si kadar büyüklükte bir çizim yapabilirsin. Çok büyük çizersen kalem durur!</li>
+                    <li><b>Zar Atma:</b> Çizim bitince 'Zar At' butonu açılır.</li>
+                    <li><b>Sonuçlar:</b>
+                        <ul>
+                            <li>🎲 1, 3, 5: <b>KAZANÇ</b> (Alan senin olur)</li>
+                            <li>🎲 2, 4, 6: <b>KAYIP</b> (Başladığın yerden silinir)</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+            <button class="primary-btn" onclick="toggleInfo(false)">ANLADIM 👍</button>
         </div>
     </div>
 
-    <div class="result-display" id="resultText"></div>
+    <div id="gameLayout">
+        <div id="canvasWrapper">
+            <canvas id="bgCanvas"></canvas>
+            <canvas id="mapCanvas"></canvas>
+            <canvas id="uiCanvas"></canvas>
+            <canvas id="fxCanvas" style="pointer-events: none;"></canvas>
+        </div>
+
+        <div id="sidePanel">
+            <div id="turnBadge">Hazırlanıyor...</div>
+            
+            <div class="btn-group">
+                <button class="icon-btn" onclick="toggleInfo(true)" title="Kurallar">❓ Nasıl Oynanır?</button>
+            </div>
+
+            <div id="p1Card" class="info-card player-card active" style="border-color: var(--p1-color);">
+                <div class="card-content">
+                    <div class="flag" id="p1FlagDisp">🏳️</div>
+                    <div class="stats" style="flex-grow:1">
+                        <h3 id="p1NameDisp">Oyuncu 1</h3>
+                        <p id="p1Score">150 px</p>
+                    </div>
+                </div>
+                <div class="limit-bar-bg"><div id="p1LimitBar" class="limit-bar-fill"></div></div>
+            </div>
+
+            <div id="p2Card" class="info-card player-card" style="border-color: var(--p2-color);">
+                <div class="card-content">
+                    <div class="flag" id="p2FlagDisp">🏳️</div>
+                    <div class="stats" style="flex-grow:1">
+                        <h3 id="p2NameDisp">Oyuncu 2</h3>
+                        <p id="p2Score">150 px</p>
+                    </div>
+                </div>
+                <div class="limit-bar-bg"><div id="p2LimitBar" class="limit-bar-fill"></div></div>
+            </div>
+
+            <div id="actionArea">
+                <div class="dice-box" id="gameDice">
+                    <div class="dice-face df1">1</div>
+                    <div class="dice-face df2">2</div>
+                    <div class="dice-face df3">3</div>
+                    <div class="dice-face df4">4</div>
+                    <div class="dice-face df5">5</div>
+                    <div class="dice-face df6">6</div>
+                </div>
+                <button id="rollBtn">ÖNCE ALAN ÇİZ 🖌️</button>
+            </div>
+        </div>
+    </div>
 
 <script>
+// --- VERİLER ---
+const COUNTRIES = [
+    { code: 'TR', name: 'Türkiye', flag: '🇹🇷' },
+    { code: 'AZ', name: 'Azerbaycan', flag: '🇦🇿' },
+    { code: 'US', name: 'ABD', flag: '🇺🇸' },
+    { code: 'DE', name: 'Almanya', flag: '🇩🇪' },
+    { code: 'JP', name: 'Japonya', flag: '🇯🇵' },
+    { code: 'KR', name: 'Güney Kore', flag: '🇰🇷' },
+    { code: 'BR', name: 'Brezilya', flag: '🇧🇷' },
+    { code: 'RU', name: 'Rusya', flag: '🇷🇺' },
+    { code: 'CN', name: 'Çin', flag: '🇨🇳' },
+    { code: 'FR', name: 'Fransa', flag: '🇫🇷' },
+    { code: 'GB', name: 'Birleşik Krallık', flag: '🇬🇧' },
+    { code: 'IT', name: 'İtalya', flag: '🇮🇹' },
+    { code: 'ES', name: 'İspanya', flag: '🇪🇸' },
+    { code: 'CA', name: 'Kanada', flag: '🇨🇦' },
+    { code: 'AU', name: 'Avustralya', flag: '🇦🇺' },
+    { code: 'IN', name: 'Hindistan', flag: '🇮🇳' },
+    { code: 'MX', name: 'Meksika', flag: '🇲🇽' },
+    { code: 'ID', name: 'Endonezya', flag: '🇮🇩' },
+    { code: 'SA', name: 'Suudi Arabistan', flag: '🇸🇦' },
+    { code: 'ZA', name: 'Güney Afrika', flag: '🇿🇦' }
+];
 
-// Oyun başlangıç kontrolü
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('startPopup').style.display = 'block';
+// --- SETUP ---
+const p1Sel = document.getElementById('p1Select');
+const p2Sel = document.getElementById('p2Select');
+
+COUNTRIES.forEach((c, i) => {
+    p1Sel.add(new Option(c.name, i));
+    p2Sel.add(new Option(c.name, i));
+});
+p1Sel.selectedIndex = 0; // TR
+p2Sel.selectedIndex = 1; // AZ
+updatePreview('p1'); updatePreview('p2');
+
+function updatePreview(p) {
+    const idx = document.getElementById(p+'Select').value;
+    document.getElementById(p+'FlagPreview').innerText = COUNTRIES[idx].flag;
+}
+
+function toggleInfo(show) {
+    const el = document.getElementById('infoModal');
+    if(show) el.classList.add('active'); else el.classList.remove('active');
+}
+
+let player1 = {}, player2 = {};
+let audioCtx;
+
+function finishSetup() {
+    const idx1 = p1Sel.value;
+    const idx2 = p2Sel.value;
+    
+    player1 = { ...COUNTRIES[idx1], color: '#ff7675' };
+    player2 = { ...COUNTRIES[idx2], color: '#74b9ff' };
+
+    document.getElementById('p1NameDisp').innerText = player1.name;
+    document.getElementById('p1FlagDisp').innerText = player1.flag;
+    document.getElementById('p2NameDisp').innerText = player2.name;
+    document.getElementById('p2FlagDisp').innerText = player2.flag;
+    
+    document.getElementById('setupModal').classList.remove('active');
+    
+    initAudio();
+    gameState.started = true;
+    resize();
+    updateTurnIndicator();
+    playTone(600, 'sine', 0.2); // Start sound
+}
+
+// --- SES (Sweet Sounds) ---
+function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playTone(freq, type, duration, delay = 0) {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + delay + 0.05);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + delay + duration);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime + delay); osc.stop(audioCtx.currentTime + delay + duration);
+}
+function playSound(ev) {
+    if(ev==='draw') playTone(300+Math.random()*100, 'sine', 0.08);
+    if(ev==='ready') { playTone(523, 'triangle', 0.1); playTone(659, 'triangle', 0.1, 0.1); }
+    if(ev==='win') { playTone(523, 'sine', 0.3); playTone(659, 'sine', 0.3, 0.1); playTone(784, 'sine', 0.5, 0.2); }
+    if(ev==='lose') { playTone(493, 'triangle', 0.3); playTone(466, 'triangle', 0.5, 0.2); }
+    if(ev==='limit') { playTone(200, 'sawtooth', 0.1); }
+}
+
+// --- OYUN MOTORU ---
+const bgCanvas = document.getElementById('bgCanvas');
+const mapCanvas = document.getElementById('mapCanvas');
+const uiCanvas = document.getElementById('uiCanvas');
+const fxCanvas = document.getElementById('fxCanvas');
+const ctxBg = bgCanvas.getContext('2d');
+const ctxMap = mapCanvas.getContext('2d', { willReadFrequently: true });
+const ctxUi = uiCanvas.getContext('2d');
+const ctxFx = fxCanvas.getContext('2d');
+
+let gameState = {
+    started: false,
+    turn: 'p1',
+    isDrawing: false,
+    pathPoints: [],
+    canRoll: false,
+    isRolling: false,
+    scores: { p1: 500, p2: 500 }, // Başlangıçta biraz yüksek ver ki ilk çizim rahat olsun
+    limitRatio: 1.2 // %120 Risk Hakkı
+};
+
+function generateMap() {
+    ctxBg.clearRect(0,0,bgCanvas.width, bgCanvas.height);
+    // Göller
+    ctxBg.fillStyle = '#b3e5fc';
+    for(let i=0; i<4; i++) {
+        let x = Math.random()*bgCanvas.width, y = Math.random()*bgCanvas.height;
+        if(Math.abs(x)<200 && Math.abs(y-bgCanvas.height)<200) continue; // P1 alanı koru
+        ctxBg.beginPath(); ctxBg.arc(x,y, 40+Math.random()*50, 0, Math.PI*2); ctxBg.fill();
+    }
+    // Emojiler
+    ctxBg.font = "24px Arial"; ctxBg.textAlign="center";
+    for(let i=0; i<20; i++) {
+        ctxBg.fillText(Math.random()>0.6?"🌲":"⛰️", Math.random()*bgCanvas.width, Math.random()*bgCanvas.height);
+    }
+}
+
+function resize() {
+    const w = document.getElementById('canvasWrapper');
+    [bgCanvas, mapCanvas, uiCanvas, fxCanvas].forEach(c => { c.width = w.clientWidth; c.height = w.clientHeight; });
+    if(gameState.started) { generateMap(); drawInitialAreas(); }
+}
+window.addEventListener('resize', resize);
+
+function drawInitialAreas() {
+    // P1
+    ctxMap.fillStyle = player1.color;
+    ctxMap.beginPath(); ctxMap.arc(0, mapCanvas.height, 160, 0, Math.PI*2); ctxMap.fill();
+    // P2
+    ctxMap.fillStyle = player2.color;
+    ctxMap.beginPath(); ctxMap.arc(mapCanvas.width, 0, 160, 0, Math.PI*2); ctxMap.fill();
+    
+    // Skorları kesin güncelle
+    setTimeout(updateScores, 100);
+}
+
+// --- DRAWING LOGIC (DÜZELTİLDİ) ---
+function getMousePos(e) {
+    const r = uiCanvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - r.left, y: cy - r.top };
+}
+
+uiCanvas.addEventListener('mousedown', startD); uiCanvas.addEventListener('mousemove', moveD); uiCanvas.addEventListener('mouseup', endD);
+uiCanvas.addEventListener('touchstart', startD, {passive:false}); uiCanvas.addEventListener('touchmove', moveD, {passive:false}); uiCanvas.addEventListener('touchend', endD);
+
+function startD(e) {
+    if(!gameState.started || gameState.canRoll || gameState.isRolling) return;
+    if(e.type==='touchstart') e.preventDefault();
+    const p = getMousePos(e);
+    
+    if(!isPointInPlayerArea(p.x, p.y, gameState.turn)) return; // Sadece kendi alanından başla
+
+    gameState.isDrawing = true;
+    gameState.pathPoints = [p];
+    playSound('draw');
+
+    ctxUi.beginPath(); ctxUi.moveTo(p.x, p.y);
+    ctxUi.strokeStyle = '#2d3436'; ctxUi.lineWidth = 3; ctxUi.setLineDash([5,5]);
+}
+
+function moveD(e) {
+    if(!gameState.isDrawing) return;
+    if(e.type==='touchmove') e.preventDefault();
+    
+    const p = getMousePos(e);
+    
+    // LİMİT KONTROLÜ (DÜZELTİLDİ)
+    // Anlık çizilen alanı hesapla
+    gameState.pathPoints.push(p); // Geçici ekle
+    const currentDrawArea = calculatePolyArea(gameState.pathPoints);
+    const maxAllowed = gameState.scores[gameState.turn] * gameState.limitRatio;
+    
+    // UI Bar Güncelle
+    const ratio = Math.min(100, (currentDrawArea / maxAllowed) * 100);
+    const barId = gameState.turn === 'p1' ? 'p1LimitBar' : 'p2LimitBar';
+    const bar = document.getElementById(barId);
+    bar.style.width = ratio + '%';
+
+    if(currentDrawArea > maxAllowed) {
+        // Limit aşıldı!
+        gameState.pathPoints.pop(); // Son noktayı iptal et
+        ctxUi.strokeStyle = 'red'; // Uyarı rengi
+        bar.style.background = 'red';
+        if(Math.random()>0.8) playSound('limit'); // Ara sıra uyarı sesi
+    } else {
+        // Devam et
+        bar.style.background = '#00b894';
+        ctxUi.strokeStyle = '#2d3436';
+    }
+
+    // Çizim
+    ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);
+    ctxUi.beginPath();
+    ctxUi.moveTo(gameState.pathPoints[0].x, gameState.pathPoints[0].y);
+    for(let pt of gameState.pathPoints) ctxUi.lineTo(pt.x, pt.y);
+    ctxUi.stroke();
+}
+
+function endD() {
+    if(!gameState.isDrawing) return;
+    gameState.isDrawing = false;
+    ctxUi.closePath();
+    
+    // Alanı hesapla
+    const area = calculatePolyArea(gameState.pathPoints);
+    const maxAllowed = gameState.scores[gameState.turn] * gameState.limitRatio;
+
+    // Barı sıfırla
+    document.getElementById('p1LimitBar').style.width = '0%';
+    document.getElementById('p2LimitBar').style.width = '0%';
+
+    // Çok küçükse veya limit aşırıysa iptal (gerçi moveD'de engelledik ama double check)
+    if(area < 100) {
+        ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);
+        return;
+    }
+
+    // Alanı göster
+    ctxUi.fillStyle = 'rgba(0,0,0,0.1)'; ctxUi.fill();
+    gameState.canRoll = true;
+    playSound('ready');
+    
+    const btn = document.getElementById('rollBtn');
+    btn.classList.add('ready');
+    btn.innerHTML = `🎲 ZAR AT (~${Math.floor(area/10)} br²)`;
+}
+
+// --- DICE & RESULTS ---
+document.getElementById('rollBtn').addEventListener('click', () => {
+    if(!gameState.canRoll) return;
+    gameState.isRolling = true;
+    document.getElementById('rollBtn').classList.remove('ready');
+    
+    const diceBox = document.getElementById('gameDice');
+    const result = Math.floor(Math.random()*6)+1;
+    
+    const xr = (Math.random()*720)+720; const yr = (Math.random()*720)+720;
+    let fx=0, fy=0;
+    if(result==1) {fx=0; fy=0;} if(result==2) {fx=0; fy=180;}
+    if(result==3) {fx=0; fy=-90;} if(result==4) {fx=0; fy=90;}
+    if(result==5) {fx=-90; fy=0;} if(result==6) {fx=90; fy=0;}
+    
+    diceBox.style.transform = `rotateX(${xr+fx}deg) rotateY(${yr+fy}deg)`;
+    setTimeout(() => applyResult(result), 1200);
 });
 
-function startGame() {
-    document.getElementById('startPopup').style.display = 'none';
+function applyResult(res) {
+    const isWin = (res % 2 !== 0); // 1,3,5 Kazanır
+    const center = gameState.pathPoints[0];
+    
+    if(isWin) {
+        playSound('win');
+        spawnParticles(center.x, center.y, gameState.turn==='p1'?player1.color:player2.color);
+        
+        ctxMap.globalCompositeOperation = 'source-over';
+        ctxMap.fillStyle = gameState.turn==='p1'?player1.color:player2.color;
+        ctxMap.beginPath();
+        ctxMap.moveTo(gameState.pathPoints[0].x, gameState.pathPoints[0].y);
+        for(let p of gameState.pathPoints) ctxMap.lineTo(p.x, p.y);
+        ctxMap.closePath();
+        ctxMap.fill();
+    } else {
+        playSound('lose');
+        spawnParticles(center.x, center.y, '#555');
+        
+        // Silme işlemi (Başlangıç noktasından, çizilen alan büyüklüğü kadar daire sil)
+        ctxMap.globalCompositeOperation = 'destination-out';
+        const area = calculatePolyArea(gameState.pathPoints);
+        const r = Math.sqrt(area / Math.PI);
+        ctxMap.beginPath(); ctxMap.arc(center.x, center.y, r, 0, Math.PI*2); ctxMap.fill();
+        ctxMap.globalCompositeOperation = 'source-over';
+    }
+    
+    setTimeout(() => {
+        ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);
+        gameState.pathPoints = [];
+        gameState.canRoll = false;
+        gameState.isRolling = false;
+        document.getElementById('rollBtn').innerHTML = "ÖNCE ALAN ÇİZ 🖌️";
+        updateScores();
+        switchTurn();
+    }, 1500);
 }
 
+// --- UTILS ---
+function isPointInPlayerArea(x, y, p) {
+    const d = ctxMap.getImageData(x,y,1,1).data;
+    if(d[3]<50) return false;
+    // P1: Red dominant, P2: Blue/Green dominant
+    return p==='p1' ? (d[0]>d[2]) : (d[2]>d[0]);
+}
 
-class UltimateStratejiOyunu {
-    constructor() {
-        this.players = {
-            player1: { id: 1, color: '#ff7675', areas: [], name: 'Tavşan Krallık' },
-            player2: { id: 2, color: '#74b9ff', areas: [], name: 'Ayı Krallık' }
-        };
-        this.currentPlayer = 'player1';
-        this.points = [];
-        this.isDrawing = false;
-        this.km2Ratio = 0.01;
-        this.initGame();
+function calculatePolyArea(pts) {
+    let area = 0;
+    for (let i = 0; i < pts.length; i++) {
+        let j = (i + 1) % pts.length;
+        area += pts[i].x * pts[j].y;
+        area -= pts[j].x * pts[i].y;
     }
+    return Math.abs(area / 2);
+}
 
-    initGame() {
-        this.initMap();
-        this.initCanvas();
-        this.updateInfoPanel();
+function updateScores() {
+    const d = ctxMap.getImageData(0,0,mapCanvas.width, mapCanvas.height).data;
+    let s1=0, s2=0;
+    for(let i=0; i<d.length; i+=400) { // Optimize scan
+        if(d[i+3]>50) { if(d[i]>d[i+2]) s1++; else s2++; }
     }
+    // Score scaling
+    gameState.scores.p1 = s1 * 10;
+    gameState.scores.p2 = s2 * 10;
+    
+    document.getElementById('p1Score').innerText = Math.floor(s1/10) + " px";
+    document.getElementById('p2Score').innerText = Math.floor(s2/10) + " px";
+    
+    // Game Over
+    if(s1 < 50 && gameState.started) alert(player2.name + " KAZANDI!");
+    if(s2 < 50 && gameState.started) alert(player1.name + " KAZANDI!");
+}
 
-    initMap() {
-        const map = document.getElementById('map');
-        const size = 100;
-        
-        this.createArea('player1', 10, map.offsetHeight - size - 10, size, size);
-        this.createArea('player2', map.offsetWidth - size - 10, 10, size, size);
-    }
+function switchTurn() {
+    gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
+    updateTurnIndicator();
+}
 
-    createArea(player, x, y, w, h) {
-        const area = document.createElement('div');
-        area.className = 'player-area';
-        area.style.cssText = `
-            left: ${x}px;
-            top: ${y}px;
-            width: ${w}px;
-            height: ${h}px;
-            background: ${this.players[player].color};
-        `;
-        area.dataset.owner = player;
-        document.getElementById('map').appendChild(area);
-        this.players[player].areas.push({x, y, w, h, element: area});
-        this.updateInfoPanel();
-    }
-
-    initCanvas() {
-        this.canvas = document.getElementById('drawCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.resizeCanvas();
-        
-        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-        this.canvas.addEventListener('mouseleave', () => this.stopDrawing());
-    }
-
-    resizeCanvas() {
-        const map = document.getElementById('map');
-        this.canvas.width = map.offsetWidth;
-        this.canvas.height = map.offsetHeight;
-    }
-
-    isPointInPlayerArea(point) {
-        return this.players[this.currentPlayer].areas.some(area => {
-            const rect = area.element.getBoundingClientRect();
-            return (
-                point.x >= rect.left &&
-                point.x <= rect.right &&
-                point.y >= rect.top &&
-                point.y <= rect.bottom
-            );
-        });
-    }
-
-    startDrawing(e) {
-        const pos = {x: e.clientX, y: e.clientY};
-        if(!this.isPointInPlayerArea(pos)) {
-            alert("Saldırıya kendi bölgenizden başlamalısınız!");
-            return;
-        }
-        
-        const mapRect = document.getElementById('map').getBoundingClientRect();
-        const canvasPos = {
-            x: pos.x - mapRect.left,
-            y: pos.y - mapRect.top
-        };
-
-        this.isDrawing = true;
-        this.points = [canvasPos];
-        this.ctx.strokeStyle = this.players[this.currentPlayer].color;
-        this.ctx.fillStyle = this.players[this.currentPlayer].color + '60';
-        this.ctx.lineWidth = 4;
-        this.ctx.beginPath();
-        this.ctx.moveTo(canvasPos.x, canvasPos.y);
-    }
-
-    draw(e) {
-        if(!this.isDrawing) return;
-        const mapRect = document.getElementById('map').getBoundingClientRect();
-        const pos = {
-            x: e.clientX - mapRect.left,
-            y: e.clientY - mapRect.top
-        };
-        this.points.push(pos);
-        this.ctx.lineTo(pos.x, pos.y);
-        this.ctx.stroke();
-    }
-
-    stopDrawing() {
-        if(!this.isDrawing) return;
-        this.isDrawing = false;
-        this.closePath();
-    }
-
-    closePath() {
-        if(this.points.length < 3) return;
-        this.ctx.closePath();
-        this.ctx.fill();
-    }
-
-    async attack() {
-        const selectedArea = this.calculateArea();
-        if(selectedArea < 100) {
-            alert('En az 100px² büyüklüğünde alan seçin!');
-            return;
-        }
-
-        const playerArea = this.calculateTotalArea(this.currentPlayer);
-        const effectiveArea = Math.min(selectedArea, playerArea);
-        
-        const result = await this.rollDiceAnimation();
-        this.processResult(result, effectiveArea);
-        this.clearCanvas();
-        
-        if(this.checkGameOver()) return;
-        
-        this.switchTurn();
-        this.updateInfoPanel();
-    }
-
-    calculateArea() {
-        if(this.points.length < 3) return 0;
-        let area = 0;
-        for(let i = 0; i < this.points.length; i++) {
-            const j = (i + 1) % this.points.length;
-            area += this.points[i].x * this.points[j].y;
-            area -= this.points[j].x * this.points[i].y;
-        }
-        return Math.abs(area / 2);
-    }
-
-    async rollDiceAnimation() {
-        const diceContainer = document.querySelector('.dice-container');
-        const resultDisplay = document.getElementById('resultText');
-        const dice = document.querySelector('.dice');
-        const results = {
-            1: { text: 'Tam Kazanç!', desc: 'Çizdiğin alanı kaptın!' },
-            2: { text: 'Tam Kayıp!', desc: 'Çizdiğin alanı kaybettin!' },
-            3: { text: 'Katlı Kazanç!', desc: 'Çizdiğin alanın 2 katını kaptın!' },
-            4: { text: 'Katlı Kayıp!', desc: 'Çizdiğin alanın 2 katını kaybettin!' },
-            5: { text: 'Yarım Kazanç!', desc: 'Çizdiğin alanın yarısını kaptın!' },
-            6: { text: 'Kısmi Kayıp!', desc: 'Çizdiğin alanın yarısını kaybettin!' }
-        };
-
-        diceContainer.style.display = 'block';
-        const result = Math.floor(Math.random() * 6) + 1;
-        
-        dice.style.transition = 'transform 1.2s cubic-bezier(0.4,0,0.2,1)';
-        dice.style.transform = 
-            `rotateX(${Math.random()*3600}deg) rotateY(${Math.random()*3600}deg)`;
-        
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        
-        dice.style.transition = 'none';
-        switch(result) {
-            case 1: dice.style.transform = 'rotateX(0deg) rotateY(0deg)'; break;
-            case 2: dice.style.transform = 'rotateX(180deg) rotateY(0deg)'; break;
-            case 3: dice.style.transform = 'rotateX(0deg) rotateY(90deg)'; break;
-            case 4: dice.style.transform = 'rotateX(0deg) rotateY(-90deg)'; break;
-            case 5: dice.style.transform = 'rotateX(90deg) rotateY(0deg)'; break;
-            case 6: dice.style.transform = 'rotateX(-90deg) rotateY(0deg)'; break;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 800));
-        diceContainer.style.display = 'none';
-        resultDisplay.innerHTML = `
-            <div>${results[result].text}</div>
-            <div style="font-size:16px;color:#666;">${results[result].desc}</div>
-        `;
-        resultDisplay.style.display = 'block';
-        
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        resultDisplay.style.display = 'none';
-        
-        return result;
-    }
-
-    processResult(result, area) {
-        const bbox = this.calculateBoundingBox();
-        const aspectRatio = bbox.w / bbox.h || 1;
-        
-        let targetArea = area;
-        switch(result) {
-            case 1: break;
-            case 2: targetArea = -area; break;
-            case 3: targetArea *= 2; break;
-            case 4: targetArea *= -2; break;
-            case 5: targetArea *= 0.5; break;
-            case 6: targetArea *= -0.5; break;
-        }
-
-        if(targetArea > 0) {
-            const newSize = this.calculateNewSize(targetArea, aspectRatio);
-            this.createArea(
-                this.currentPlayer,
-                bbox.x + (bbox.w - newSize.w)/2,
-                bbox.y + (bbox.h - newSize.h)/2,
-                newSize.w,
-                newSize.h
-            );
-        } else {
-            this.shrinkArea(this.players[this.currentPlayer], Math.abs(targetArea));
-        }
-    }
-
-    calculateBoundingBox() {
-        const minX = Math.min(...this.points.map(p => p.x));
-        const maxX = Math.max(...this.points.map(p => p.x));
-        const minY = Math.min(...this.points.map(p => p.y));
-        const maxY = Math.max(...this.points.map(p => p.y));
-        return {
-            x: minX,
-            y: minY,
-            w: maxX - minX,
-            h: maxY - minY
-        };
-    }
-
-    calculateNewSize(area, aspectRatio) {
-        const height = Math.sqrt(area / aspectRatio);
-        const width = area / height;
-        return { w: width, h: height };
-    }
-
-    shrinkArea(player, amount) {
-        const areaToRemove = Math.sqrt(amount);
-        player.areas = player.areas.filter(area => {
-            if(area.w > areaToRemove && area.h > areaToRemove) {
-                area.w -= areaToRemove;
-                area.h -= areaToRemove;
-                area.element.style.width = area.w + 'px';
-                area.element.style.height = area.h + 'px';
-                return true;
-            }
-            area.element.remove();
-            return false;
-        });
-    }
-
-    checkGameOver() {
-        const p1Area = this.players.player1.areas.length;
-        const p2Area = this.players.player2.areas.length;
-        
-        if(p1Area === 0 || p2Area === 0) {
-            const winner = p1Area > 0 ? 'Tavşan Krallık' : 'Ayı Krallık';
-            alert(`Oyun Bitti! Kazanan: ${winner}`);
-            location.reload();
-            return true;
-        }
-        return false;
-    }
-
-    calculateTotalArea(player) {
-        return this.players[player].areas.reduce((sum, area) => sum + (area.w * area.h), 0);
-    }
-
-    updateInfoPanel() {
-        document.getElementById('p1Size').textContent = (this.calculateTotalArea('player1') * this.km2Ratio).toFixed(2) + ' km²';
-        document.getElementById('p2Size').textContent = (this.calculateTotalArea('player2') * this.km2Ratio).toFixed(2) + ' km²';
-        document.querySelectorAll('.player-info').forEach(el => el.classList.remove('active-player'));
-        document.getElementById(`${this.currentPlayer}Info`).classList.add('active-player');
-        document.getElementById('currentPlayerName').textContent = 
-            this.players[this.currentPlayer].name;
-    }
-
-    switchTurn() {
-        this.currentPlayer = this.currentPlayer === 'player1' ? 'player2' : 'player1';
-    }
-
-    clearCanvas() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.points = [];
+function updateTurnIndicator() {
+    const badge = document.getElementById('turnBadge');
+    document.getElementById('p1Card').classList.remove('active');
+    document.getElementById('p2Card').classList.remove('active');
+    
+    if(gameState.turn === 'p1') {
+        badge.innerHTML = `Sıra: ${player1.flag} ${player1.name}`;
+        badge.style.background = player1.color;
+        document.getElementById('p1Card').classList.add('active');
+    } else {
+        badge.innerHTML = `Sıra: ${player2.flag} ${player2.name}`;
+        badge.style.background = player2.color;
+        document.getElementById('p2Card').classList.add('active');
     }
 }
 
-const game = new UltimateStratejiOyunu();
-
-function endSelection() {
-    game.attack();
+// --- PARTICLES ---
+let particles = [];
+function spawnParticles(x,y,c) {
+    for(let i=0;i<20;i++) particles.push({x:x,y:y,vx:(Math.random()-.5)*10,vy:(Math.random()-.5)*10,life:1,c:c});
 }
+function loopFx() {
+    ctxFx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.life-=0.05;
+        ctxFx.globalAlpha=p.life; ctxFx.fillStyle=p.c; 
+        ctxFx.beginPath(); ctxFx.arc(p.x,p.y,4,0,Math.PI*2); ctxFx.fill();
+    });
+    particles=particles.filter(p=>p.life>0);
+    requestAnimationFrame(loopFx);
+}
+loopFx();
+
 </script>
 </body>
 </html>
