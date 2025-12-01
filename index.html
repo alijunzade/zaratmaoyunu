@@ -1,658 +1,641 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="tr">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2487.6">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 16.0px 0.0px; font: 12.0px Helvetica; color: #131313; -webkit-text-stroke: #131313}
-    p.p2 {margin: 0.0px 0.0px 16.0px 0.0px; font: 12.0px Helvetica; color: #131313; -webkit-text-stroke: #131313; min-height: 14.0px}
-    span.s1 {font-kerning: none}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Boyama Savaşları: Global Risk</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+        :root {
+            --bg-ocean: #2c3e50;
+            --p1-color: #ff7675; /* Pastel Kırmızı */
+            --p2-color: #74b9ff; /* Pastel Mavi */
+            --panel-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #1e272e 0%, #485460 100%);
+            display: flex; flex-direction: column;
+            height: 100vh; user-select: none; touch-action: none;
+        }
+
+        /* --- ÜST GÜÇ BARI --- */
+        #tugOfWarBar {
+            width: 100%; height: 24px; display: flex;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 50; background: #333;
+        }
+        #barP1 { height: 100%; background: var(--p1-color); width: 50%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: flex-start; padding-left: 10px; color: white; font-size: 11px; white-space: nowrap; overflow: hidden; font-weight:bold;}
+        #barP2 { height: 100%; background: var(--p2-color); width: 50%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: #333; font-size: 11px; white-space: nowrap; overflow: hidden; font-weight:bold;}
+        
+        /* --- OYUN ALANI --- */
+        #gameLayout {
+            display: flex; gap: 15px; align-items: center; justify-content: center;
+            flex-grow: 1; padding: 15px; width: 100%; box-sizing: border-box;
+        }
+
+        #canvasWrapper {
+            flex-grow: 1; height: 100%; background: #81ecec; /* Okyanus Rengi */
+            border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            position: relative; overflow: hidden; border: 6px solid #fff;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 14px; }
+        #uiCanvas { cursor: crosshair; }
+
+        /* --- SAĞ PANEL --- */
+        #sidePanel {
+            width: 320px; display: flex; flex-direction: column; gap: 10px; height: 100%;
+        }
+
+        .info-card {
+            background: var(--panel-bg); padding: 10px 15px; border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.2s;
+            border-left: 6px solid #ddd; position: relative;
+        }
+        .player-card.active { transform: scale(1.02); border-color: gold !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        
+        .card-content { display: flex; align-items: center; gap: 10px; }
+        .flag { font-size: 26px; }
+        .stats h3 { margin: 0; font-size: 15px; color: #2d3436; }
+        .stats p { margin: 0; font-size: 13px; color: #636e72; font-weight: bold; }
+
+        .limit-bar-bg { width: 100%; height: 6px; background: #eee; border-radius: 3px; margin-top: 5px; overflow: hidden; border:1px solid #ccc;}
+        .limit-bar-fill { height: 100%; width: 0%; background: #00b894; transition: width 0.1s; }
+
+        #turnBadge {
+            background: #6c5ce7; color: white; text-align: center; padding: 10px;
+            border-radius: 12px; font-size: 15px; box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        }
+
+        /* SONUÇ KUTUSU */
+        #lastResultBox {
+            background: white; padding: 10px; border-radius: 15px;
+            text-align: center; font-size: 13px; color: #555;
+            min-height: 50px; display: flex; align-items: center; justify-content: center; flex-direction: column;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05); border: 2px dashed #ccc;
+            transition: all 0.3s;
+        }
+        #lastResultBox b { font-size: 16px; display: block; margin-bottom: 2px;}
+        #lastResultBox.win { background: #dff9fb; border-color: #00b894; color: #009432; }
+        #lastResultBox.lose { background: #ffcccc; border-color: #d63031; color: #d63031; }
+
+        /* ZAR ALANI */
+        #actionArea { margin-top: auto; text-align: center; position: relative; height: 130px; }
+        
+        .dice-container {
+            position: absolute; top: -30px; left: 50%; transform: translateX(-50%) scale(1.3);
+            perspective: 1000px; width: 60px; height: 60px; z-index: 10;
+        }
+        .dice-box { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }
+        .dice-face {
+            position: absolute; width: 100%; height: 100%; background: white;
+            border: 2px solid #b2bec3; border-radius: 10px; display: flex;
+            justify-content: center; align-items: center; font-size: 24px; font-weight: bold;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.1); color: #2d3436;
+        }
+        .df1 { transform: translateZ(30px); } .df2 { transform: rotateY(180deg) translateZ(30px); }
+        .df3 { transform: rotateY(90deg) translateZ(30px); } .df4 { transform: rotateY(-90deg) translateZ(30px); }
+        .df5 { transform: rotateX(90deg) translateZ(30px); } .df6 { transform: rotateX(-90deg) translateZ(30px); }
+
+        #rollBtn {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px;
+            border: none; border-radius: 15px; background: #dfe6e9; color: #636e72;
+            font-size: 16px; font-weight: bold; cursor: not-allowed; transition: all 0.3s;
+        }
+        #rollBtn.ready { background: #0984e3; color: white; cursor: pointer; box-shadow: 0 6px 0 #074f83; animation: pulseBtn 1s infinite; }
+        #rollBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #074f83; }
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-card { background: white; padding: 30px; border-radius: 30px; text-align: center; max-width: 500px; width: 90%; transform: scale(0.8); transition: transform 0.3s; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal-overlay.active .modal-card { transform: scale(1); }
+
+        .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+        .player-select { background: #f8f9fa; padding: 15px; border-radius: 15px; }
+        .primary-btn { background: linear-gradient(45deg, #0984e3, #74b9ff); color: white; border: none; padding: 12px 40px; font-size: 18px; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(9, 132, 227, 0.4); }
+
+        .rules-box { text-align:left; font-size:13px; color:#555; background:#f1f2f6; padding:15px; border-radius:10px; margin-bottom:20px; line-height: 1.6; border: 1px solid #ddd; }
+        .rule-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 3px 0; }
+        .rule-win { color: #009432; font-weight: bold; }
+        .rule-lose { color: #d63031; font-weight: bold; }
+
+        @keyframes pulseBtn { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
+        @media (max-width: 768px) {
+            #gameLayout { flex-direction: column; height: auto; }
+            #sidePanel { width: 100%; height: auto; flex-direction: column; }
+            #actionArea { height: 100px; }
+            .dice-container { top: -20px; transform: translateX(-50%) scale(1.2); }
+        }
+    </style>
 </head>
 <body>
-<p class="p1"><span class="s1">&lt;!DOCTYPE html&gt;</span></p>
-<p class="p1"><span class="s1">&lt;html lang="tr"&gt;</span></p>
-<p class="p1"><span class="s1">&lt;head&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;title&gt;Boyama Savaşları: Global Risk&lt;/title&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;style&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&amp;display=swap');</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>:root {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>--bg-ocean: #2c3e50;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>--p1-color: #ff7675; /* Pastel Kırmızı */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>--p2-color: #74b9ff; /* Pastel Mavi */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>--panel-bg: rgba(255, 255, 255, 0.95);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>body {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>background: linear-gradient(135deg, #1e272e 0%, #485460 100%);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>display: flex; flex-direction: column;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>height: 100vh; user-select: none; touch-action: none;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>/* --- ÜST GÜÇ BARI --- */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#tugOfWarBar {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>width: 100%; height: 24px; display: flex;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 50; background: #333;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#barP1 { height: 100%; background: var(--p1-color); width: 50%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: flex-start; padding-left: 10px; color: white; font-size: 11px; white-space: nowrap; overflow: hidden; font-weight:bold;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#barP2 { height: 100%; background: var(--p2-color); width: 50%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: #333; font-size: 11px; white-space: nowrap; overflow: hidden; font-weight:bold;}</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">        </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>/* --- OYUN ALANI --- */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#gameLayout {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>display: flex; gap: 15px; align-items: center; justify-content: center;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>flex-grow: 1; padding: 15px; width: 100%; box-sizing: border-box;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#canvasWrapper {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>flex-grow: 1; height: 100%; background: #81ecec; /* Okyanus Rengi */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: relative; overflow: hidden; border: 6px solid #fff;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 14px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#uiCanvas { cursor: crosshair; }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>/* --- SAĞ PANEL --- */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#sidePanel {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>width: 320px; display: flex; flex-direction: column; gap: 10px; height: 100%;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.info-card {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>background: var(--panel-bg); padding: 10px 15px; border-radius: 15px;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.2s;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>border-left: 6px solid #ddd; position: relative;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.player-card.active { transform: scale(1.02); border-color: gold !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">        </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.card-content { display: flex; align-items: center; gap: 10px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.flag { font-size: 26px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.stats h3 { margin: 0; font-size: 15px; color: #2d3436; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.stats p { margin: 0; font-size: 13px; color: #636e72; font-weight: bold; }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.limit-bar-bg { width: 100%; height: 6px; background: #eee; border-radius: 3px; margin-top: 5px; overflow: hidden; border:1px solid #ccc;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.limit-bar-fill { height: 100%; width: 0%; background: #00b894; transition: width 0.1s; }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#turnBadge {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>background: #6c5ce7; color: white; text-align: center; padding: 10px;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>border-radius: 12px; font-size: 15px; box-shadow: 0 4px 0 rgba(0,0,0,0.1);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>/* SONUÇ KUTUSU */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#lastResultBox {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>background: white; padding: 10px; border-radius: 15px;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>text-align: center; font-size: 13px; color: #555;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>min-height: 50px; display: flex; align-items: center; justify-content: center; flex-direction: column;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box-shadow: inset 0 0 10px rgba(0,0,0,0.05); border: 2px dashed #ccc;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>transition: all 0.3s;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#lastResultBox b { font-size: 16px; display: block; margin-bottom: 2px;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#lastResultBox.win { background: #dff9fb; border-color: #00b894; color: #009432; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#lastResultBox.lose { background: #ffcccc; border-color: #d63031; color: #d63031; }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>/* ZAR ALANI */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#actionArea { margin-top: auto; text-align: center; position: relative; height: 130px; }</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">        </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.dice-container {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: absolute; top: -30px; left: 50%; transform: translateX(-50%) scale(1.3);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>perspective: 1000px; width: 60px; height: 60px; z-index: 10;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.dice-box { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.dice-face {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: absolute; width: 100%; height: 100%; background: white;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>border: 2px solid #b2bec3; border-radius: 10px; display: flex;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>justify-content: center; align-items: center; font-size: 24px; font-weight: bold;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box-shadow: inset 0 0 8px rgba(0,0,0,0.1); color: #2d3436;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.df1 { transform: translateZ(30px); } .df2 { transform: rotateY(180deg) translateZ(30px); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.df3 { transform: rotateY(90deg) translateZ(30px); } .df4 { transform: rotateY(-90deg) translateZ(30px); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.df5 { transform: rotateX(90deg) translateZ(30px); } .df6 { transform: rotateX(-90deg) translateZ(30px); }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#rollBtn {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>border: none; border-radius: 15px; background: #dfe6e9; color: #636e72;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>font-size: 16px; font-weight: bold; cursor: not-allowed; transition: all 0.3s;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#rollBtn.ready { background: #0984e3; color: white; cursor: pointer; box-shadow: 0 6px 0 #074f83; animation: pulseBtn 1s infinite; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>#rollBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #074f83; }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>/* MODALS */</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.modal-overlay {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: fixed; top: 0; left: 0; width: 100%; height: 100%;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>display: flex; justify-content: center; align-items: center; z-index: 100;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>opacity: 0; pointer-events: none; transition: opacity 0.3s;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.modal-overlay.active { opacity: 1; pointer-events: all; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.modal-card { background: white; padding: 30px; border-radius: 30px; text-align: center; max-width: 500px; width: 90%; transform: scale(0.8); transition: transform 0.3s; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.modal-overlay.active .modal-card { transform: scale(1); }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.player-select { background: #f8f9fa; padding: 15px; border-radius: 15px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.primary-btn { background: linear-gradient(45deg, #0984e3, #74b9ff); color: white; border: none; padding: 12px 40px; font-size: 18px; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(9, 132, 227, 0.4); }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.rules-box { text-align:left; font-size:13px; color:#555; background:#f1f2f6; padding:15px; border-radius:10px; margin-bottom:20px; line-height: 1.6; border: 1px solid #ddd; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.rule-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 3px 0; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.rule-win { color: #009432; font-weight: bold; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.rule-lose { color: #d63031; font-weight: bold; }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>@keyframes pulseBtn { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>@media (max-width: 768px) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>#gameLayout { flex-direction: column; height: auto; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>#sidePanel { width: 100%; height: auto; flex-direction: column; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>#actionArea { height: 100px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>.dice-container { top: -20px; transform: translateX(-50%) scale(1.2); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/head&gt;</span></p>
-<p class="p1"><span class="s1">&lt;body&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;div id="setupModal" class="modal-overlay active"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div class="modal-card"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;h1 style="color:#2c3e50; margin:0;"&gt;🌍 Boyama Savaşları&lt;/h1&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;p style="color:#7f8c8d;"&gt;Risk ve Strateji&lt;/p&gt;</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">            </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="setup-grid"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="player-select" style="border: 2px solid var(--p1-color);"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;h4 style="margin:0; color:#ff6b6b"&gt;Oyuncu 1&lt;/h4&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div style="font-size:40px; margin:10px 0;" id="p1FlagPreview"&gt;❓&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;select id="p1Select" onchange="updatePreview('p1')" style="width:100%"&gt;&lt;/select&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="player-select" style="border: 2px solid var(--p2-color);"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;h4 style="margin:0; color:#48dbfb"&gt;Oyuncu 2&lt;/h4&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div style="font-size:40px; margin:10px 0;" id="p2FlagPreview"&gt;❓&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;select id="p2Select" onchange="updatePreview('p2')" style="width:100%"&gt;&lt;/select&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">            </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="rules-box"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div style="margin-bottom:5px; text-align:center;"&gt;&lt;b&gt;🎲 ZAR SONUÇLARI&lt;/b&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="rule-row"&gt;&lt;span&gt;1️⃣&lt;/span&gt; &lt;span class="rule-win"&gt;Tam Kazan (Seçtiğini Al)&lt;/span&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="rule-row"&gt;&lt;span&gt;2️⃣&lt;/span&gt; &lt;span class="rule-lose"&gt;Tam Kaybet (Seçtiğin Silinir)&lt;/span&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="rule-row"&gt;&lt;span&gt;3️⃣&lt;/span&gt; &lt;span class="rule-win"&gt;🔥 2 KAT KAZAN (Büyür)&lt;/span&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="rule-row"&gt;&lt;span&gt;4️⃣&lt;/span&gt; &lt;span class="rule-lose"&gt;💀 2 KAT KAYBET (Büyüyüp Silinir)&lt;/span&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="rule-row"&gt;&lt;span&gt;5️⃣&lt;/span&gt; &lt;span class="rule-win"&gt;½ Yarım Kazan (Küçülür)&lt;/span&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="rule-row"&gt;&lt;span&gt;6️⃣&lt;/span&gt; &lt;span class="rule-lose"&gt;½ Yarım Kaybet (Küçülüp Silinir)&lt;/span&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button class="primary-btn" onclick="finishSetup()"&gt;BAŞLAT 🚀&lt;/button&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;div id="tugOfWarBar"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="barP1"&gt;P1 %50&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="barCenter"&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="barP2"&gt;P2 %50&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;div id="gameLayout"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="canvasWrapper"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;canvas id="bgCanvas"&gt;&lt;/canvas&gt; &lt;canvas id="mapCanvas"&gt;&lt;/canvas&gt; &lt;canvas id="uiCanvas"&gt;&lt;/canvas&gt; &lt;canvas id="fxCanvas" style="pointer-events: none;"&gt;&lt;/canvas&gt; &lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="sidePanel"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="turnBadge"&gt;Sıra: Bekleniyor&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="p1Card" class="info-card player-card active" style="border-color: var(--p1-color);"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="card-content"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="flag" id="p1FlagDisp"&gt;🏳️&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="stats" style="flex-grow:1"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;h3 id="p1NameDisp"&gt;Oyuncu 1&lt;/h3&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;p id="p1Score"&gt;---&lt;/p&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="limit-bar-bg"&gt;&lt;div id="p1LimitBar" class="limit-bar-fill"&gt;&lt;/div&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="p2Card" class="info-card player-card" style="border-color: var(--p2-color);"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="card-content"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="flag" id="p2FlagDisp"&gt;🏳️&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="stats" style="flex-grow:1"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;h3 id="p2NameDisp"&gt;Oyuncu 2&lt;/h3&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;p id="p2Score"&gt;---&lt;/p&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="limit-bar-bg"&gt;&lt;div id="p2LimitBar" class="limit-bar-fill"&gt;&lt;/div&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="lastResultBox"&gt;Savaş başlıyor...&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="actionArea"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="dice-container"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="dice-box" id="gameDice"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="dice-face df1"&gt;1&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="dice-face df2"&gt;2&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="dice-face df3"&gt;3&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="dice-face df4"&gt;4&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="dice-face df5"&gt;5&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="dice-face df6"&gt;6&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;button id="rollBtn"&gt;ÖNCE ALAN ÇİZ 🖌️&lt;/button&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">&lt;script&gt;</span></p>
-<p class="p1"><span class="s1">// --- VERİ ---</span></p>
-<p class="p1"><span class="s1">const COUNTRIES = [</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'TR', name: 'Türkiye', flag: '🇹🇷' }, { code: 'AZ', name: 'Azerbaycan', flag: '🇦🇿' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'US', name: 'ABD', flag: '🇺🇸' }, { code: 'DE', name: 'Almanya', flag: '🇩🇪' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'JP', name: 'Japonya', flag: '🇯🇵' }, { code: 'KR', name: 'Güney Kore', flag: '🇰🇷' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'BR', name: 'Brezilya', flag: '🇧🇷' }, { code: 'RU', name: 'Rusya', flag: '🇷🇺' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'CN', name: 'Çin', flag: '🇨🇳' }, { code: 'FR', name: 'Fransa', flag: '🇫🇷' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'IN', name: 'Hindistan', flag: '🇮🇳' }, { code: 'GB', name: 'İngiltere', flag: '🇬🇧' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'IT', name: 'İtalya', flag: '🇮🇹' }, { code: 'ES', name: 'İspanya', flag: '🇪🇸' },</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>{ code: 'MX', name: 'Meksika', flag: '🇲🇽' }, { code: 'CA', name: 'Kanada', flag: '🇨🇦' }</span></p>
-<p class="p1"><span class="s1">];</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">const p1Sel = document.getElementById('p1Select');</span></p>
-<p class="p1"><span class="s1">const p2Sel = document.getElementById('p2Select');</span></p>
-<p class="p1"><span class="s1">COUNTRIES.forEach((c, i) =&gt; { p1Sel.add(new Option(c.name, i)); p2Sel.add(new Option(c.name, i)); });</span></p>
-<p class="p1"><span class="s1">p1Sel.selectedIndex = 0; p2Sel.selectedIndex = 1;</span></p>
-<p class="p1"><span class="s1">updatePreview('p1'); updatePreview('p2');</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function updatePreview(p) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const idx = document.getElementById(p+'Select').value;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById(p+'FlagPreview').innerText = COUNTRIES[idx].flag;</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">let player1 = {}, player2 = {};</span></p>
-<p class="p1"><span class="s1">let gameState = {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>started: false,</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>readyToPlay: false, // BUG FIX: Başlangıçta game over olmasın</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>turn: 'p1',</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>isDrawing: false,</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>pathPoints: [],</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>canRoll: false,</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>isRolling: false,</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>scores: { p1: 100000, p2: 100000 }, // Başlangıçta yüksek değer (güvenli)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>limitRatio: 1.0 // TAM Kendi alanı kadar</span></p>
-<p class="p1"><span class="s1">};</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">// --- SES SİSTEMİ (Sweet Sounds) ---</span></p>
-<p class="p1"><span class="s1">const audioCtx = new (window.AudioContext || window.webkitAudioContext)();</span></p>
-<p class="p1"><span class="s1">function playTone(freq, type, duration, delay=0, vol=0.1) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(audioCtx.state==='suspended') audioCtx.resume();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const o = audioCtx.createOscillator(); const g = audioCtx.createGain();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>o.type=type; o.frequency.setValueAtTime(freq, audioCtx.currentTime+delay);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>g.gain.setValueAtTime(0, audioCtx.currentTime+delay);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+delay+0.05);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+delay+duration);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>o.connect(g); g.connect(audioCtx.destination);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>o.start(audioCtx.currentTime+delay); o.stop(audioCtx.currentTime+delay+duration);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function playSound(ev) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='draw') playTone(400+Math.random()*200, 'sine', 0.05, 0, 0.05);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='tick') playTone(800, 'square', 0.02, 0, 0.05);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='ready') playTone(1000, 'sine', 0.2);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='win') { playTone(523.25, 'sine', 0.3, 0, 0.2); playTone(659.25, 'sine', 0.3, 0.1, 0.2); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='winBig') { playTone(523.25, 'triangle', 0.3, 0, 0.2); playTone(1046.50, 'triangle', 0.5, 0.2, 0.2); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='lose') { playTone(400, 'sine', 0.3, 0, 0.2); playTone(300, 'sine', 0.5, 0.1, 0.2); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='loseBig') { playTone(300, 'sawtooth', 0.4, 0, 0.1); playTone(150, 'sawtooth', 0.6, 0.2, 0.1); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='start') { playTone(600, 'sine', 0.5); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(ev==='limit') { playTone(200, 'sawtooth', 0.1); }</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">// --- CANVAS SETUP ---</span></p>
-<p class="p1"><span class="s1">const bgCanvas = document.getElementById('bgCanvas');</span></p>
-<p class="p1"><span class="s1">const mapCanvas = document.getElementById('mapCanvas');</span></p>
-<p class="p1"><span class="s1">const uiCanvas = document.getElementById('uiCanvas');</span></p>
-<p class="p1"><span class="s1">const fxCanvas = document.getElementById('fxCanvas');</span></p>
-<p class="p1"><span class="s1">const ctxBg = bgCanvas.getContext('2d');</span></p>
-<p class="p1"><span class="s1">const ctxMap = mapCanvas.getContext('2d', { willReadFrequently: true });</span></p>
-<p class="p1"><span class="s1">const ctxUi = uiCanvas.getContext('2d');</span></p>
-<p class="p1"><span class="s1">const ctxFx = fxCanvas.getContext('2d');</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function finishSetup() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const idx1 = p1Sel.value; const idx2 = p2Sel.value;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>player1 = { ...COUNTRIES[idx1], color: '#ff7675' };</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>player2 = { ...COUNTRIES[idx2], color: '#74b9ff' };</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p1NameDisp').innerText = player1.name;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p1FlagDisp').innerText = player1.flag;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p2NameDisp').innerText = player2.name;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p2FlagDisp').innerText = player2.flag;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('setupModal').classList.remove('active');</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.started = true;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>resize();</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// SAFE INIT: Harita oturduktan sonra puan hesapla</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>setTimeout(() =&gt; {<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>drawInitialAreas();<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>setTimeout(() =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>updateScores();<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>gameState.readyToPlay = true;<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}, 300);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}, 100);</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>updateTurnIndicator();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>playSound('start');</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function resize() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const w = document.getElementById('canvasWrapper');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>[bgCanvas, mapCanvas, uiCanvas, fxCanvas].forEach(c =&gt; { c.width = w.clientWidth; c.height = w.clientHeight; });</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(gameState.started) { drawWorldMap(); drawInitialAreas(); }</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p1"><span class="s1">window.addEventListener('resize', resize);</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function drawWorldMap() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxBg.clearRect(0,0,bgCanvas.width, bgCanvas.height);</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Grid</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxBg.strokeStyle = 'rgba(255,255,255,0.1)'; ctxBg.lineWidth=1;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let i=0; i&lt;bgCanvas.width; i+=60) { ctxBg.beginPath(); ctxBg.moveTo(i,0); ctxBg.lineTo(i,bgCanvas.height); ctxBg.stroke(); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let i=0; i&lt;bgCanvas.height; i+=60) { ctxBg.beginPath(); ctxBg.moveTo(0,i); ctxBg.lineTo(bgCanvas.width,i); ctxBg.stroke(); }</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Kıtalar (Yeşil Alanlar)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxBg.fillStyle = '#badc58'; // Kara</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const lands = [{x:0.2,y:0.3,r:90}, {x:0.7,y:0.3,r:100}, {x:0.6,y:0.7,r:80}, {x:0.25,y:0.65,r:70}];</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>lands.forEach(l =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>let cx = l.x*bgCanvas.width; let cy=l.y*bgCanvas.height;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(Math.hypot(cx,cy-bgCanvas.height)&lt;250 || Math.hypot(cx-bgCanvas.width, cy)&lt;250) return;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxBg.beginPath();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>for(let a=0; a&lt;Math.PI*2; a+=0.4) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>let r = l.r + Math.random()*25;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>ctxBg.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxBg.fill();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>});</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Dekorasyon</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxBg.font = "24px Arial"; ctxBg.textAlign="center";</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let i=0;i&lt;20;i++) ctxBg.fillText(Math.random()&gt;.5?"🌲":"⛰️", Math.random()*bgCanvas.width, Math.random()*bgCanvas.height);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function drawInitialAreas() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Sol Alt (P1)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.fillStyle = player1.color;<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.beginPath(); ctxMap.arc(0, mapCanvas.height, 180, 0, Math.PI*2); ctxMap.fill();</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Sağ Üst (P2)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.fillStyle = player2.color;<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.beginPath(); ctxMap.arc(mapCanvas.width, 0, 180, 0, Math.PI*2); ctxMap.fill();</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">// --- ÇİZİM VE LİMİT HESAPLAMA ---</span></p>
-<p class="p1"><span class="s1">function getMousePos(e) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const r = uiCanvas.getBoundingClientRect();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const cx = e.touches ? e.touches[0].clientX : e.clientX;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const cy = e.touches ? e.touches[0].clientY : e.clientY;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>return { x: cx - r.left, y: cy - r.top };</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">uiCanvas.addEventListener('mousedown', startD); uiCanvas.addEventListener('mousemove', moveD); uiCanvas.addEventListener('mouseup', endD);</span></p>
-<p class="p1"><span class="s1">uiCanvas.addEventListener('touchstart', startD, {passive:false}); uiCanvas.addEventListener('touchmove', moveD, {passive:false}); uiCanvas.addEventListener('touchend', endD);</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function startD(e) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(!gameState.started || gameState.canRoll || gameState.isRolling) return;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(e.type==='touchstart') e.preventDefault();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const p = getMousePos(e);</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const px = ctxMap.getImageData(p.x, p.y, 1, 1).data;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const isP1 = (gameState.turn === 'p1' &amp;&amp; px[0] &gt; px[2]); // Kırmızı</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const isP2 = (gameState.turn === 'p2' &amp;&amp; px[2] &gt; px[0]); // Mavi</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(!isP1 &amp;&amp; !isP2) return;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.isDrawing = true; gameState.pathPoints = [p];</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>playSound('draw');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.beginPath(); ctxUi.moveTo(p.x, p.y);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.strokeStyle = '#2d3436'; ctxUi.lineWidth = 3; ctxUi.setLineDash([5,5]);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function moveD(e) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(!gameState.isDrawing) return;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(e.type==='touchmove') e.preventDefault();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const p = getMousePos(e);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.pathPoints.push(p);</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Limit Kontrolü (Hata düzeltildi: Gerçek Piksel vs Gerçek Piksel)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const currentDrawArea = calculatePolyArea(gameState.pathPoints);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const maxAllowed = gameState.scores[gameState.turn] * gameState.limitRatio;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const ratio = Math.min(100, (currentDrawArea / maxAllowed) * 100);</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const barId = gameState.turn==='p1'?'p1LimitBar':'p2LimitBar';</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const bar = document.getElementById(barId);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>bar.style.width = ratio + '%';</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Görsel Geri Bildirim</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if (currentDrawArea &gt; maxAllowed) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>bar.style.background = '#e74c3c'; // Kırmızı (Hata)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxUi.strokeStyle = '#e74c3c';</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(Math.random()&gt;0.9) playSound('limit');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>} else {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>bar.style.background = '#00b894'; // Yeşil (OK)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxUi.strokeStyle = '#2d3436';</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.beginPath(); ctxUi.moveTo(gameState.pathPoints[0].x, gameState.pathPoints[0].y);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let pt of gameState.pathPoints) ctxUi.lineTo(pt.x, pt.y);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.stroke();</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function endD() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(!gameState.isDrawing) return;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.isDrawing = false;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.closePath();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxUi.fillStyle = 'rgba(0,0,0,0.1)'; ctxUi.fill();</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const area = calculatePolyArea(gameState.pathPoints);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const maxAllowed = gameState.scores[gameState.turn] * gameState.limitRatio;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Reset Bar</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p1LimitBar').style.width = '0%'; document.getElementById('p2LimitBar').style.width = '0%';</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Validasyon</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(area &lt; 100) { ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height); return; }</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(area &gt; maxAllowed) {<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>alert("Sınırı aştın! Sadece sahip olduğun kadar alanı riske edebilirsin.");</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>return;<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.canRoll = true;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const btn = document.getElementById('rollBtn');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>btn.classList.add('ready');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Göstermelik birim (1000'e bölerek sadeleştirdik)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>btn.innerHTML = `🎲 ZAR AT (Risk: ${Math.floor(area/100)})`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>playSound('ready');</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">// --- ZAR VE SONUÇ ---</span></p>
-<p class="p1"><span class="s1">document.getElementById('rollBtn').addEventListener('click', () =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(!gameState.canRoll) return;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.isRolling = true;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('rollBtn').classList.remove('ready');</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const target = Math.floor(Math.random()*6)+1;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>animateDice(target);</span></p>
-<p class="p1"><span class="s1">});</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function animateDice(target) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const box = document.getElementById('gameDice');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>let frame = 0; const duration = 120; // 2 sn</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>let vx = 20, vy = 20; let rx = 0, ry = 0;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const loop = setInterval(() =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>frame++;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>vx *= 0.98; vy *= 0.98; rx += vx; ry += vy;</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">        </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>// Wobble Effect (Sonlara doğru heyecan)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(frame &gt; duration - 30) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>let tx=0, ty=0;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(target==1) {tx=0; ty=0;} if(target==2) {tx=0; ty=180;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(target==3) {tx=0; ty=-90;} if(target==4) {tx=0; ty=90;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(target==5) {tx=-90; ty=0;} if(target==6) {tx=90; ty=0;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const w = Math.sin(frame)*15;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box.style.transform = `rotateX(${tx+w+720}deg) rotateY(${ty+w+720}deg) scale(1.2)`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} else {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.2)`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(frame%10===0) playSound('tick');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(frame &gt;= duration) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>clearInterval(loop);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>let tx=0, ty=0;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(target==1) {tx=0; ty=0;} if(target==2) {tx=0; ty=180;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(target==3) {tx=0; ty=-90;} if(target==4) {tx=0; ty=90;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if(target==5) {tx=-90; ty=0;} if(target==6) {tx=90; ty=0;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box.style.transform = `rotateX(${tx+720}deg) rotateY(${ty+720}deg) scale(1)`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>processResult(target);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}, 16);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function processResult(res) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const player = gameState.turn === 'p1' ? player1 : player2;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const center = getCentroid(gameState.pathPoints);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const box = document.getElementById('lastResultBox');</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>let scale = 1, mode = 'source-over', msg = "", sound = "win", color = player.color;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// --- 1-6 MANTIĞI ---</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>switch(res) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>case 1: scale=1; mode='source-over'; msg="1️⃣ TAM İSABET! Alanı kaptın."; sound='win'; break;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>case 2: scale=1; mode='destination-out'; msg="2️⃣ KAYIP! Seçtiğin yer silindi."; sound='lose'; break;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>case 3: scale=1.41; mode='source-over'; msg="3️⃣ 2 KAT KAZANÇ! Muazzam büyüme!"; sound='winBig'; break;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>case 4: scale=1.41; mode='destination-out'; msg="4️⃣ 2 KAT KAYIP! Büyük hasar!"; sound='loseBig'; break;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>case 5: scale=0.7; mode='source-over'; msg="5️⃣ YARIM KAZANÇ. Olsun, kârdır."; sound='win'; break;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>case 6: scale=0.7; mode='destination-out'; msg="6️⃣ YARIM KAYIP. Ucuz atlattın."; sound='lose'; break;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>playSound(sound);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>spawnParticles(center.x, center.y, mode==='source-over'?color:'#555', scale*20);</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Canvas İşlemi</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.save();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.translate(center.x, center.y);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.scale(scale, scale); // Büyütme/Küçültme burada yapılıyor</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.translate(-center.x, -center.y);</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.globalCompositeOperation = mode; // Silme veya Boyama</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.fillStyle = color;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.beginPath();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.moveTo(gameState.pathPoints[0].x, gameState.pathPoints[0].y);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let p of gameState.pathPoints) ctxMap.lineTo(p.x, p.y);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.closePath();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.fill();</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.restore();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxMap.globalCompositeOperation = 'source-over';</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// UI Güncelle</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>box.innerHTML = `&lt;b&gt;${player.name} (${res}):&lt;/b&gt; ${msg}`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>box.className = mode==='source-over'?'win':'lose';</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>setTimeout(() =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>gameState.pathPoints = []; gameState.canRoll = false; gameState.isRolling = false;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>document.getElementById('rollBtn').innerHTML = "ÖNCE ALAN ÇİZ 🖌️";</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>updateScores(); switchTurn();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}, 1800);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">// --- YARDIMCI ---</span></p>
-<p class="p1"><span class="s1">function getCentroid(pts) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>let x=0, y=0; for(let p of pts){x+=p.x; y+=p.y;}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>return {x:x/pts.length, y:y/pts.length};</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function calculatePolyArea(pts) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>let a=0;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let i=0; i&lt;pts.length; i++) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>let j=(i+1)%pts.length; a += pts[i].x*pts[j].y; a -= pts[j].x*pts[i].y;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>return Math.abs(a/2);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function updateScores() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Sadece oyun hazırken çalış</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if (!gameState.readyToPlay &amp;&amp; gameState.scores.p1 &gt; 0) return;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Gerçek piksel sayımı (Hassas ölçüm)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const d = ctxMap.getImageData(0,0,mapCanvas.width, mapCanvas.height).data;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>let s1=0, s2=0, step=64; // Örnekleme hızı (performans/doğruluk dengesi)</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let i=0; i&lt;d.length; i+=step) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(d[i+3]&gt;50) { if(d[i]&gt;d[i+2]) s1++; else s2++; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Piksel sayısını örnekleme oranıyla çarpıp gerçek alana yaklaştır</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// step = 64 (her 16 pikselden 1'i, rgba 4 byte olduğu için 64/4 = 16)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const realS1 = s1 * 16;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const realS2 = s2 * 16;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.scores.p1 = realS1;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.scores.p2 = realS2;</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p1Score').innerText = Math.floor(realS1/1000) + " br";</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p2Score').innerText = Math.floor(realS2/1000) + " br";</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Bar</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const total = realS1 + realS2 + 1;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('barP1').style.width = (realS1/total)*100+"%";</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('barP1').innerText = player1.name + " %" + Math.round((realS1/total)*100);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('barP2').style.width = (realS2/total)*100+"%";</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('barP2').innerText = "%" + Math.round((realS2/total)*100) + " " + player2.name;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Game Over</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(gameState.readyToPlay) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(realS1 &lt; 5000) { alert("🏆 " + player2.name + " KAZANDI!"); location.reload(); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if(realS2 &lt; 5000) { alert("🏆 " + player1.name + " KAZANDI!"); location.reload(); }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function switchTurn() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>updateTurnIndicator();</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">function updateTurnIndicator() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const badge = document.getElementById('turnBadge');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p1Card').classList.remove('active');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>document.getElementById('p2Card').classList.remove('active');</span></p>
-<p class="p2"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if(gameState.turn === 'p1') {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>badge.innerHTML = `Sıra: ${player1.flag} ${player1.name}`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>badge.style.background = player1.color;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>document.getElementById('p1Card').classList.add('active');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>} else {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>badge.innerHTML = `Sıra: ${player2.flag} ${player2.name}`;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>badge.style.background = player2.color;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>document.getElementById('p2Card').classList.add('active');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">// --- EFEKTLER ---</span></p>
-<p class="p1"><span class="s1">let particles = [];</span></p>
-<p class="p1"><span class="s1">function spawnParticles(x,y,c, count=20) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>for(let i=0;i&lt;count;i++) particles.push({x:x,y:y,vx:(Math.random()-.5)*15,vy:(Math.random()-.5)*15,life:1,c:c});</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p1"><span class="s1">function loopFx() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ctxFx.clearRect(0,0,fxCanvas.width,fxCanvas.height);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>particles.forEach(p=&gt;{</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>p.x+=p.vx; p.y+=p.vy; p.life-=0.04;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxFx.globalAlpha=p.life; ctxFx.fillStyle=p.c;<span class="Apple-converted-space"> </span></span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>ctxFx.beginPath(); ctxFx.arc(p.x,p.y,4,0,Math.PI*2); ctxFx.fill();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>});</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>particles=particles.filter(p=&gt;p.life&gt;0);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>requestAnimationFrame(loopFx);</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p1"><span class="s1">loopFx();</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1">&lt;/script&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/body&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/html&gt;</span></p>
+
+    <div id="setupModal" class="modal-overlay active">
+        <div class="modal-card">
+            <h1 style="color:#2c3e50; margin:0;">🌍 Boyama Savaşları</h1>
+            <p style="color:#7f8c8d;">Risk ve Strateji</p>
+            
+            <div class="setup-grid">
+                <div class="player-select" style="border: 2px solid var(--p1-color);">
+                    <h4 style="margin:0; color:#ff6b6b">Oyuncu 1</h4>
+                    <div style="font-size:40px; margin:10px 0;" id="p1FlagPreview">❓</div>
+                    <select id="p1Select" onchange="updatePreview('p1')" style="width:100%"></select>
+                </div>
+                <div class="player-select" style="border: 2px solid var(--p2-color);">
+                    <h4 style="margin:0; color:#48dbfb">Oyuncu 2</h4>
+                    <div style="font-size:40px; margin:10px 0;" id="p2FlagPreview">❓</div>
+                    <select id="p2Select" onchange="updatePreview('p2')" style="width:100%"></select>
+                </div>
+            </div>
+            
+            <div class="rules-box">
+                <div style="margin-bottom:5px; text-align:center;"><b>🎲 ZAR SONUÇLARI</b></div>
+                <div class="rule-row"><span>1️⃣</span> <span class="rule-win">Tam Kazan (Seçtiğini Al)</span></div>
+                <div class="rule-row"><span>2️⃣</span> <span class="rule-lose">Tam Kaybet (Seçtiğin Silinir)</span></div>
+                <div class="rule-row"><span>3️⃣</span> <span class="rule-win">🔥 2 KAT KAZAN (Büyür)</span></div>
+                <div class="rule-row"><span>4️⃣</span> <span class="rule-lose">💀 2 KAT KAYBET (Büyüyüp Silinir)</span></div>
+                <div class="rule-row"><span>5️⃣</span> <span class="rule-win">½ Yarım Kazan (Küçülür)</span></div>
+                <div class="rule-row"><span>6️⃣</span> <span class="rule-lose">½ Yarım Kaybet (Küçülüp Silinir)</span></div>
+            </div>
+
+            <button class="primary-btn" onclick="finishSetup()">BAŞLAT 🚀</button>
+        </div>
+    </div>
+
+    <div id="tugOfWarBar">
+        <div id="barP1">P1 %50</div>
+        <div id="barCenter"></div>
+        <div id="barP2">P2 %50</div>
+    </div>
+
+    <div id="gameLayout">
+        <div id="canvasWrapper">
+            <canvas id="bgCanvas"></canvas> <canvas id="mapCanvas"></canvas> <canvas id="uiCanvas"></canvas> <canvas id="fxCanvas" style="pointer-events: none;"></canvas> </div>
+
+        <div id="sidePanel">
+            <div id="turnBadge">Sıra: Bekleniyor</div>
+
+            <div id="p1Card" class="info-card player-card active" style="border-color: var(--p1-color);">
+                <div class="card-content">
+                    <div class="flag" id="p1FlagDisp">🏳️</div>
+                    <div class="stats" style="flex-grow:1">
+                        <h3 id="p1NameDisp">Oyuncu 1</h3>
+                        <p id="p1Score">---</p>
+                    </div>
+                </div>
+                <div class="limit-bar-bg"><div id="p1LimitBar" class="limit-bar-fill"></div></div>
+            </div>
+
+            <div id="p2Card" class="info-card player-card" style="border-color: var(--p2-color);">
+                <div class="card-content">
+                    <div class="flag" id="p2FlagDisp">🏳️</div>
+                    <div class="stats" style="flex-grow:1">
+                        <h3 id="p2NameDisp">Oyuncu 2</h3>
+                        <p id="p2Score">---</p>
+                    </div>
+                </div>
+                <div class="limit-bar-bg"><div id="p2LimitBar" class="limit-bar-fill"></div></div>
+            </div>
+
+            <div id="lastResultBox">Savaş başlıyor...</div>
+
+            <div id="actionArea">
+                <div class="dice-container">
+                    <div class="dice-box" id="gameDice">
+                        <div class="dice-face df1">1</div>
+                        <div class="dice-face df2">2</div>
+                        <div class="dice-face df3">3</div>
+                        <div class="dice-face df4">4</div>
+                        <div class="dice-face df5">5</div>
+                        <div class="dice-face df6">6</div>
+                    </div>
+                </div>
+                <button id="rollBtn">ÖNCE ALAN ÇİZ 🖌️</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- VERİ ---
+const COUNTRIES = [
+    { code: 'TR', name: 'Türkiye', flag: '🇹🇷' }, { code: 'AZ', name: 'Azerbaycan', flag: '🇦🇿' },
+    { code: 'US', name: 'ABD', flag: '🇺🇸' }, { code: 'DE', name: 'Almanya', flag: '🇩🇪' },
+    { code: 'JP', name: 'Japonya', flag: '🇯🇵' }, { code: 'KR', name: 'Güney Kore', flag: '🇰🇷' },
+    { code: 'BR', name: 'Brezilya', flag: '🇧🇷' }, { code: 'RU', name: 'Rusya', flag: '🇷🇺' },
+    { code: 'CN', name: 'Çin', flag: '🇨🇳' }, { code: 'FR', name: 'Fransa', flag: '🇫🇷' },
+    { code: 'IN', name: 'Hindistan', flag: '🇮🇳' }, { code: 'GB', name: 'İngiltere', flag: '🇬🇧' },
+    { code: 'IT', name: 'İtalya', flag: '🇮🇹' }, { code: 'ES', name: 'İspanya', flag: '🇪🇸' },
+    { code: 'MX', name: 'Meksika', flag: '🇲🇽' }, { code: 'CA', name: 'Kanada', flag: '🇨🇦' }
+];
+
+const p1Sel = document.getElementById('p1Select');
+const p2Sel = document.getElementById('p2Select');
+COUNTRIES.forEach((c, i) => { p1Sel.add(new Option(c.name, i)); p2Sel.add(new Option(c.name, i)); });
+p1Sel.selectedIndex = 0; p2Sel.selectedIndex = 1;
+updatePreview('p1'); updatePreview('p2');
+
+function updatePreview(p) {
+    const idx = document.getElementById(p+'Select').value;
+    document.getElementById(p+'FlagPreview').innerText = COUNTRIES[idx].flag;
+}
+
+let player1 = {}, player2 = {};
+let gameState = {
+    started: false,
+    readyToPlay: false, // BUG FIX: Başlangıçta game over olmasın
+    turn: 'p1',
+    isDrawing: false,
+    pathPoints: [],
+    canRoll: false,
+    isRolling: false,
+    scores: { p1: 100000, p2: 100000 }, // Başlangıçta yüksek değer (güvenli)
+    limitRatio: 1.0 // TAM Kendi alanı kadar
+};
+
+// --- SES SİSTEMİ (Sweet Sounds) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(freq, type, duration, delay=0, vol=0.1) {
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq, audioCtx.currentTime+delay);
+    g.gain.setValueAtTime(0, audioCtx.currentTime+delay);
+    g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+delay+0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+delay+duration);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(audioCtx.currentTime+delay); o.stop(audioCtx.currentTime+delay+duration);
+}
+
+function playSound(ev) {
+    if(ev==='draw') playTone(400+Math.random()*200, 'sine', 0.05, 0, 0.05);
+    if(ev==='tick') playTone(800, 'square', 0.02, 0, 0.05);
+    if(ev==='ready') playTone(1000, 'sine', 0.2);
+    if(ev==='win') { playTone(523.25, 'sine', 0.3, 0, 0.2); playTone(659.25, 'sine', 0.3, 0.1, 0.2); }
+    if(ev==='winBig') { playTone(523.25, 'triangle', 0.3, 0, 0.2); playTone(1046.50, 'triangle', 0.5, 0.2, 0.2); }
+    if(ev==='lose') { playTone(400, 'sine', 0.3, 0, 0.2); playTone(300, 'sine', 0.5, 0.1, 0.2); }
+    if(ev==='loseBig') { playTone(300, 'sawtooth', 0.4, 0, 0.1); playTone(150, 'sawtooth', 0.6, 0.2, 0.1); }
+    if(ev==='start') { playTone(600, 'sine', 0.5); }
+    if(ev==='limit') { playTone(200, 'sawtooth', 0.1); }
+}
+
+// --- CANVAS SETUP ---
+const bgCanvas = document.getElementById('bgCanvas');
+const mapCanvas = document.getElementById('mapCanvas');
+const uiCanvas = document.getElementById('uiCanvas');
+const fxCanvas = document.getElementById('fxCanvas');
+const ctxBg = bgCanvas.getContext('2d');
+const ctxMap = mapCanvas.getContext('2d', { willReadFrequently: true });
+const ctxUi = uiCanvas.getContext('2d');
+const ctxFx = fxCanvas.getContext('2d');
+
+function finishSetup() {
+    const idx1 = p1Sel.value; const idx2 = p2Sel.value;
+    player1 = { ...COUNTRIES[idx1], color: '#ff7675' };
+    player2 = { ...COUNTRIES[idx2], color: '#74b9ff' };
+    
+    document.getElementById('p1NameDisp').innerText = player1.name;
+    document.getElementById('p1FlagDisp').innerText = player1.flag;
+    document.getElementById('p2NameDisp').innerText = player2.name;
+    document.getElementById('p2FlagDisp').innerText = player2.flag;
+    document.getElementById('setupModal').classList.remove('active');
+    
+    gameState.started = true;
+    resize();
+    
+    // SAFE INIT: Harita oturduktan sonra puan hesapla
+    setTimeout(() => { 
+        drawInitialAreas(); 
+        setTimeout(() => {
+            updateScores(); 
+            gameState.readyToPlay = true; 
+        }, 300);
+    }, 100);
+
+    updateTurnIndicator();
+    playSound('start');
+}
+
+function resize() {
+    const w = document.getElementById('canvasWrapper');
+    [bgCanvas, mapCanvas, uiCanvas, fxCanvas].forEach(c => { c.width = w.clientWidth; c.height = w.clientHeight; });
+    if(gameState.started) { drawWorldMap(); drawInitialAreas(); }
+}
+window.addEventListener('resize', resize);
+
+function drawWorldMap() {
+    ctxBg.clearRect(0,0,bgCanvas.width, bgCanvas.height);
+    
+    // Grid
+    ctxBg.strokeStyle = 'rgba(255,255,255,0.1)'; ctxBg.lineWidth=1;
+    for(let i=0; i<bgCanvas.width; i+=60) { ctxBg.beginPath(); ctxBg.moveTo(i,0); ctxBg.lineTo(i,bgCanvas.height); ctxBg.stroke(); }
+    for(let i=0; i<bgCanvas.height; i+=60) { ctxBg.beginPath(); ctxBg.moveTo(0,i); ctxBg.lineTo(bgCanvas.width,i); ctxBg.stroke(); }
+
+    // Kıtalar (Yeşil Alanlar)
+    ctxBg.fillStyle = '#badc58'; // Kara
+    const lands = [{x:0.2,y:0.3,r:90}, {x:0.7,y:0.3,r:100}, {x:0.6,y:0.7,r:80}, {x:0.25,y:0.65,r:70}];
+    lands.forEach(l => {
+        let cx = l.x*bgCanvas.width; let cy=l.y*bgCanvas.height;
+        if(Math.hypot(cx,cy-bgCanvas.height)<250 || Math.hypot(cx-bgCanvas.width, cy)<250) return;
+        ctxBg.beginPath();
+        for(let a=0; a<Math.PI*2; a+=0.4) {
+            let r = l.r + Math.random()*25;
+            ctxBg.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
+        }
+        ctxBg.fill();
+    });
+    
+    // Dekorasyon
+    ctxBg.font = "24px Arial"; ctxBg.textAlign="center";
+    for(let i=0;i<20;i++) ctxBg.fillText(Math.random()>.5?"🌲":"⛰️", Math.random()*bgCanvas.width, Math.random()*bgCanvas.height);
+}
+
+function drawInitialAreas() {
+    // Sol Alt (P1)
+    ctxMap.fillStyle = player1.color; 
+    ctxMap.beginPath(); ctxMap.arc(0, mapCanvas.height, 180, 0, Math.PI*2); ctxMap.fill();
+    
+    // Sağ Üst (P2)
+    ctxMap.fillStyle = player2.color; 
+    ctxMap.beginPath(); ctxMap.arc(mapCanvas.width, 0, 180, 0, Math.PI*2); ctxMap.fill();
+}
+
+// --- ÇİZİM VE LİMİT HESAPLAMA ---
+function getMousePos(e) {
+    const r = uiCanvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - r.left, y: cy - r.top };
+}
+
+uiCanvas.addEventListener('mousedown', startD); uiCanvas.addEventListener('mousemove', moveD); uiCanvas.addEventListener('mouseup', endD);
+uiCanvas.addEventListener('touchstart', startD, {passive:false}); uiCanvas.addEventListener('touchmove', moveD, {passive:false}); uiCanvas.addEventListener('touchend', endD);
+
+function startD(e) {
+    if(!gameState.started || gameState.canRoll || gameState.isRolling) return;
+    if(e.type==='touchstart') e.preventDefault();
+    const p = getMousePos(e);
+    
+    const px = ctxMap.getImageData(p.x, p.y, 1, 1).data;
+    const isP1 = (gameState.turn === 'p1' && px[0] > px[2]); // Kırmızı
+    const isP2 = (gameState.turn === 'p2' && px[2] > px[0]); // Mavi
+    if(!isP1 && !isP2) return;
+
+    gameState.isDrawing = true; gameState.pathPoints = [p];
+    playSound('draw');
+    ctxUi.beginPath(); ctxUi.moveTo(p.x, p.y);
+    ctxUi.strokeStyle = '#2d3436'; ctxUi.lineWidth = 3; ctxUi.setLineDash([5,5]);
+}
+
+function moveD(e) {
+    if(!gameState.isDrawing) return;
+    if(e.type==='touchmove') e.preventDefault();
+    const p = getMousePos(e);
+    gameState.pathPoints.push(p);
+    
+    // Limit Kontrolü (Hata düzeltildi: Gerçek Piksel vs Gerçek Piksel)
+    const currentDrawArea = calculatePolyArea(gameState.pathPoints);
+    const maxAllowed = gameState.scores[gameState.turn] * gameState.limitRatio;
+    const ratio = Math.min(100, (currentDrawArea / maxAllowed) * 100);
+    
+    const barId = gameState.turn==='p1'?'p1LimitBar':'p2LimitBar';
+    const bar = document.getElementById(barId);
+    bar.style.width = ratio + '%';
+    
+    // Görsel Geri Bildirim
+    if (currentDrawArea > maxAllowed) {
+        bar.style.background = '#e74c3c'; // Kırmızı (Hata)
+        ctxUi.strokeStyle = '#e74c3c';
+        if(Math.random()>0.9) playSound('limit');
+    } else {
+        bar.style.background = '#00b894'; // Yeşil (OK)
+        ctxUi.strokeStyle = '#2d3436';
+    }
+
+    ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);
+    ctxUi.beginPath(); ctxUi.moveTo(gameState.pathPoints[0].x, gameState.pathPoints[0].y);
+    for(let pt of gameState.pathPoints) ctxUi.lineTo(pt.x, pt.y);
+    ctxUi.stroke();
+}
+
+function endD() {
+    if(!gameState.isDrawing) return;
+    gameState.isDrawing = false;
+    ctxUi.closePath();
+    ctxUi.fillStyle = 'rgba(0,0,0,0.1)'; ctxUi.fill();
+    
+    const area = calculatePolyArea(gameState.pathPoints);
+    const maxAllowed = gameState.scores[gameState.turn] * gameState.limitRatio;
+
+    // Reset Bar
+    document.getElementById('p1LimitBar').style.width = '0%'; document.getElementById('p2LimitBar').style.width = '0%';
+
+    // Validasyon
+    if(area < 100) { ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height); return; }
+    
+    if(area > maxAllowed) { 
+        alert("Sınırı aştın! Sadece sahip olduğun kadar alanı riske edebilirsin.");
+        ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height); 
+        return; 
+    }
+    
+    gameState.canRoll = true;
+    const btn = document.getElementById('rollBtn');
+    btn.classList.add('ready');
+    // Göstermelik birim (1000'e bölerek sadeleştirdik)
+    btn.innerHTML = `🎲 ZAR AT (Risk: ${Math.floor(area/100)})`;
+    playSound('ready');
+}
+
+// --- ZAR VE SONUÇ ---
+document.getElementById('rollBtn').addEventListener('click', () => {
+    if(!gameState.canRoll) return;
+    gameState.isRolling = true;
+    document.getElementById('rollBtn').classList.remove('ready');
+    
+    const target = Math.floor(Math.random()*6)+1;
+    animateDice(target);
+});
+
+function animateDice(target) {
+    const box = document.getElementById('gameDice');
+    let frame = 0; const duration = 120; // 2 sn
+    let vx = 20, vy = 20; let rx = 0, ry = 0;
+
+    const loop = setInterval(() => {
+        frame++;
+        vx *= 0.98; vy *= 0.98; rx += vx; ry += vy;
+        
+        // Wobble Effect (Sonlara doğru heyecan)
+        if(frame > duration - 30) {
+            let tx=0, ty=0;
+            if(target==1) {tx=0; ty=0;} if(target==2) {tx=0; ty=180;}
+            if(target==3) {tx=0; ty=-90;} if(target==4) {tx=0; ty=90;}
+            if(target==5) {tx=-90; ty=0;} if(target==6) {tx=90; ty=0;}
+            const w = Math.sin(frame)*15;
+            box.style.transform = `rotateX(${tx+w+720}deg) rotateY(${ty+w+720}deg) scale(1.2)`;
+        } else {
+            box.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.2)`;
+            if(frame%10===0) playSound('tick');
+        }
+
+        if(frame >= duration) {
+            clearInterval(loop);
+            let tx=0, ty=0;
+            if(target==1) {tx=0; ty=0;} if(target==2) {tx=0; ty=180;}
+            if(target==3) {tx=0; ty=-90;} if(target==4) {tx=0; ty=90;}
+            if(target==5) {tx=-90; ty=0;} if(target==6) {tx=90; ty=0;}
+            box.style.transform = `rotateX(${tx+720}deg) rotateY(${ty+720}deg) scale(1)`;
+            processResult(target);
+        }
+    }, 16);
+}
+
+function processResult(res) {
+    const player = gameState.turn === 'p1' ? player1 : player2;
+    const center = getCentroid(gameState.pathPoints);
+    const box = document.getElementById('lastResultBox');
+    
+    let scale = 1, mode = 'source-over', msg = "", sound = "win", color = player.color;
+
+    // --- 1-6 MANTIĞI ---
+    switch(res) {
+        case 1: scale=1; mode='source-over'; msg="1️⃣ TAM İSABET! Alanı kaptın."; sound='win'; break;
+        case 2: scale=1; mode='destination-out'; msg="2️⃣ KAYIP! Seçtiğin yer silindi."; sound='lose'; break;
+        case 3: scale=1.41; mode='source-over'; msg="3️⃣ 2 KAT KAZANÇ! Muazzam büyüme!"; sound='winBig'; break;
+        case 4: scale=1.41; mode='destination-out'; msg="4️⃣ 2 KAT KAYIP! Büyük hasar!"; sound='loseBig'; break;
+        case 5: scale=0.7; mode='source-over'; msg="5️⃣ YARIM KAZANÇ. Olsun, kârdır."; sound='win'; break;
+        case 6: scale=0.7; mode='destination-out'; msg="6️⃣ YARIM KAYIP. Ucuz atlattın."; sound='lose'; break;
+    }
+
+    playSound(sound);
+    spawnParticles(center.x, center.y, mode==='source-over'?color:'#555', scale*20);
+    
+    // Canvas İşlemi
+    ctxMap.save();
+    ctxMap.translate(center.x, center.y);
+    ctxMap.scale(scale, scale); // Büyütme/Küçültme burada yapılıyor
+    ctxMap.translate(-center.x, -center.y);
+    
+    ctxMap.globalCompositeOperation = mode; // Silme veya Boyama
+    ctxMap.fillStyle = color;
+    ctxMap.beginPath();
+    ctxMap.moveTo(gameState.pathPoints[0].x, gameState.pathPoints[0].y);
+    for(let p of gameState.pathPoints) ctxMap.lineTo(p.x, p.y);
+    ctxMap.closePath();
+    ctxMap.fill();
+    
+    ctxMap.restore();
+    ctxMap.globalCompositeOperation = 'source-over';
+
+    // UI Güncelle
+    box.innerHTML = `<b>${player.name} (${res}):</b> ${msg}`;
+    box.className = mode==='source-over'?'win':'lose';
+
+    setTimeout(() => {
+        ctxUi.clearRect(0,0,uiCanvas.width, uiCanvas.height);
+        gameState.pathPoints = []; gameState.canRoll = false; gameState.isRolling = false;
+        document.getElementById('rollBtn').innerHTML = "ÖNCE ALAN ÇİZ 🖌️";
+        updateScores(); switchTurn();
+    }, 1800);
+}
+
+// --- YARDIMCI ---
+function getCentroid(pts) {
+    let x=0, y=0; for(let p of pts){x+=p.x; y+=p.y;}
+    return {x:x/pts.length, y:y/pts.length};
+}
+
+function calculatePolyArea(pts) {
+    let a=0;
+    for(let i=0; i<pts.length; i++) {
+        let j=(i+1)%pts.length; a += pts[i].x*pts[j].y; a -= pts[j].x*pts[i].y;
+    }
+    return Math.abs(a/2);
+}
+
+function updateScores() {
+    // Sadece oyun hazırken çalış
+    if (!gameState.readyToPlay && gameState.scores.p1 > 0) return;
+
+    // Gerçek piksel sayımı (Hassas ölçüm)
+    const d = ctxMap.getImageData(0,0,mapCanvas.width, mapCanvas.height).data;
+    let s1=0, s2=0, step=64; // Örnekleme hızı (performans/doğruluk dengesi)
+    
+    for(let i=0; i<d.length; i+=step) {
+        if(d[i+3]>50) { if(d[i]>d[i+2]) s1++; else s2++; }
+    }
+    
+    // Piksel sayısını örnekleme oranıyla çarpıp gerçek alana yaklaştır
+    // step = 64 (her 16 pikselden 1'i, rgba 4 byte olduğu için 64/4 = 16)
+    const realS1 = s1 * 16;
+    const realS2 = s2 * 16;
+
+    gameState.scores.p1 = realS1;
+    gameState.scores.p2 = realS2;
+    
+    document.getElementById('p1Score').innerText = Math.floor(realS1/1000) + " br";
+    document.getElementById('p2Score').innerText = Math.floor(realS2/1000) + " br";
+    
+    // Bar
+    const total = realS1 + realS2 + 1;
+    document.getElementById('barP1').style.width = (realS1/total)*100+"%";
+    document.getElementById('barP1').innerText = player1.name + " %" + Math.round((realS1/total)*100);
+    document.getElementById('barP2').style.width = (realS2/total)*100+"%";
+    document.getElementById('barP2').innerText = "%" + Math.round((realS2/total)*100) + " " + player2.name;
+
+    // Game Over
+    if(gameState.readyToPlay) {
+        if(realS1 < 5000) { alert("🏆 " + player2.name + " KAZANDI!"); location.reload(); }
+        if(realS2 < 5000) { alert("🏆 " + player1.name + " KAZANDI!"); location.reload(); }
+    }
+}
+
+function switchTurn() {
+    gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
+    updateTurnIndicator();
+}
+
+function updateTurnIndicator() {
+    const badge = document.getElementById('turnBadge');
+    document.getElementById('p1Card').classList.remove('active');
+    document.getElementById('p2Card').classList.remove('active');
+    
+    if(gameState.turn === 'p1') {
+        badge.innerHTML = `Sıra: ${player1.flag} ${player1.name}`;
+        badge.style.background = player1.color;
+        document.getElementById('p1Card').classList.add('active');
+    } else {
+        badge.innerHTML = `Sıra: ${player2.flag} ${player2.name}`;
+        badge.style.background = player2.color;
+        document.getElementById('p2Card').classList.add('active');
+    }
+}
+
+// --- EFEKTLER ---
+let particles = [];
+function spawnParticles(x,y,c, count=20) {
+    for(let i=0;i<count;i++) particles.push({x:x,y:y,vx:(Math.random()-.5)*15,vy:(Math.random()-.5)*15,life:1,c:c});
+}
+function loopFx() {
+    ctxFx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.life-=0.04;
+        ctxFx.globalAlpha=p.life; ctxFx.fillStyle=p.c; 
+        ctxFx.beginPath(); ctxFx.arc(p.x,p.y,4,0,Math.PI*2); ctxFx.fill();
+    });
+    particles=particles.filter(p=>p.life>0);
+    requestAnimationFrame(loopFx);
+}
+loopFx();
+
+</script>
 </body>
 </html>
